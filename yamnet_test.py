@@ -47,7 +47,7 @@ def ensure_sample_rate(original_sample_rate, waveform,
 # video sample
 wav_file_name = "../data/input/101_2Ihlw5FFrx4.mp4"
 #wav_file_name = "../data/input/101_3rtzSsuJ4Ng.mp4.webm"
-wav_data, sample_rate = librosa.load(wav_file_name , sr = 16000)
+wav_data, sample_rate = librosa.load(wav_file_name , sr = 16000, mono=True)
 #sf.write("../data/output/101_2Ihlw5FFrx4_sr.wav", wav_data, sample_rate)
 
 
