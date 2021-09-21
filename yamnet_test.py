@@ -10,7 +10,16 @@ sess = tf.compat.v1.Session(config=config)
 
 import numpy
 import scipy
-kh
+
+# INPUT
+# The model accepts a 1-D float32 Tensor or NumPy array containing a waveform of arbitrary length, represented as mono 16 kHz samples in the range [-1.0, +1.0]. 
+# Internally, we frame the waveform into sliding windows of length 0.96 seconds and hop 0.48 seconds, and then run the core of the model on a batch of these frames.
+
+# OUTPUT
+# scores is a float32 Tensor of shape (N, 521) containing the per-frame predicted scores for each of the 521 classes in the AudioSet ontology that are supported by YAMNet.
+# embeddings is a float32 Tensor of shape (N, 1024) containing per-frame embeddings, where the embedding vector is the average-pooled output that feeds into the final classifier layer.
+# log_mel_spectrogram is a float32 Tensor representing the log mel spectrogram of the entire waveform. These are the audio features passed into the model and have shape (num_spectrogram_frames, 64) 
+# where num_spectrogram_frames is the number of frames produced from the waveform by sliding a spectrogram analysis window of length 0.025 seconds with hop 0.01 seconds, and 64 represents the number of mel bins.
 #%%############################################################################
 
 """
@@ -55,6 +64,7 @@ print(f'Size of the input: {len(wav_data)}')
 loading yamnet model
 
 """
+
 
 import tensorflow_hub as hub
 import matplotlib.pyplot as plt
