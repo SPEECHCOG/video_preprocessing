@@ -11,7 +11,7 @@ sess = tf.compat.v1.Session(config=config)
 import numpy
 import scipy
 kh
-#%%
+#%%############################################################################
 
 """
 This is a simple script for reading audio from video
@@ -49,7 +49,7 @@ print(f'Total duration: {duration:.2f}s')
 print(f'Size of the input: {len(wav_data)}')
 
 
-#%%
+#%%############################################################################
 
 """
 loading yamnet model
@@ -78,7 +78,7 @@ def class_names_from_csv(class_map_csv_text):
 class_map_path = model.class_map_path().numpy()
 class_names = class_names_from_csv(class_map_path)
 
-#%%
+#%%############################################################################
 
 """
 Executing the Model
@@ -92,11 +92,19 @@ scores, embeddings, spectrogram = model(waveform)
 
 scores_np = scores.numpy()
 spectrogram_np = spectrogram.numpy()
+embeddings_np = embeddings.numpy()
+all_max_scores = scores_np.max(axis = 1)
+all_max_class_indexes = scores_np.argmax(axis = 1)
+all_max_class_indexes = [class_names[ind] for ind in all_max_class_indexes]
+
 infered_class = class_names[scores_np.mean(axis=0).argmax()]
 print(f'The main sound is: {infered_class}')
 
-
-#%%
+mean_scores = numpy.mean(scores, axis=0)
+top_n = 10
+top_class_indices = numpy.argsort(mean_scores)[::-1][:top_n]
+top_classes = [class_names[ind] for ind in top_class_indices]
+#%%############################################################################
 
 """
 Plotting the results
@@ -115,17 +123,15 @@ plt.subplot(3, 1, 2)
 plt.imshow(spectrogram_np.T, aspect='auto', interpolation='nearest', origin='lower')
 
 # Plot and label the model output scores for the top-scoring classes.
-mean_scores = numpy.mean(scores, axis=0)
-top_n = 10
-top_class_indices = numpy.argsort(mean_scores)[::-1][:top_n]
+
 plt.subplot(3, 1, 3)
 plt.imshow(scores_np[:, top_class_indices].T, aspect='auto', interpolation='nearest', cmap='gray_r')
 
-# patch_padding = (PATCH_WINDOW_SECONDS / 2) / PATCH_HOP_SECONDS
+
 # values from the model documentation
 patch_padding = (0.025 / 2) / 0.01
 plt.xlim([-patch_padding-0.5, scores.shape[0] + patch_padding-0.5])
 # Label the top_N classes.
 yticks = range(0, top_n, 1)
 plt.yticks(yticks, [class_names[top_class_indices[x]] for x in yticks])
-# _ = plt.ylim(-0.5 + np.array([top_n, 0]))
+
