@@ -23,7 +23,7 @@ import librosa
 
 
 # video sample
-wav_file_name = "../data/input/101_2Ihlw5FFrx4.mp4"
+wav_file_name = "../data/input/101_3rtzSsuJ4Ng.mp4.webm"
 wav_original, sample_rate = librosa.load(wav_file_name , mono=True)
 #sf.write("../data/output/101_2Ihlw5FFrx4_sr.wav", wav_data, sample_rate)
 wav_data = librosa.core.resample(wav_original, sample_rate, 16000) 
@@ -128,10 +128,11 @@ infered_class = class_names[scores_np.mean(axis=0).argmax()]
 Detecting speech segments
 
 """ 
+win_hope_logmel = 0.01
 
-win_hope = 0.48 # s/frame
+win_hope_yamnet = 0.48 # s/frame
 position_frame = 446 # for example for the last frame
-position_second = position_frame * win_hope # frame/ (frame/s)
+position_second = position_frame * win_hope_yamnet # frame/ (frame/s)
 
 
 speech_segments =  [item == 0 or item == 1 or item == 2 or item == 3 for item in all_max_class_indexes]
@@ -139,14 +140,17 @@ speech_segments = numpy.multiply(speech_segments , 1)
 plt.plot(speech_segments)
 
 clip_length_seconds = 10
-clip_length_frames = int (round(clip_length_seconds / win_hope ))  # 21 frames --> almost equal to ~10 seconds of audio
+clip_length_yamnet = int (round(clip_length_seconds / win_hope_yamnet ))  # 21 frames --> almost equal to ~10 seconds of audio
+clip_length_logmel = int (round(clip_length_seconds / win_hope_logmel)) # 1000 frames
+
+
 accepted_rate = 0.8
 accepted_plus = int(round(21 * 0.8)) # 17
 
 number_of_clips = duration / clip_length_seconds 
 
 from random import shuffle
-initial_sequence = [onset for onset in range(clip_length_frames , len(speech_segments) - clip_length_frames)] # skip first 10 seconds of the audio which is 21 frames
+initial_sequence = [onset for onset in range(clip_length_yamnet , len(speech_segments) - clip_length_yamnet)] # skip first 10 seconds of the audio which is 21 frames
 
 
 max_trials = int( len(initial_sequence) / 2)
@@ -163,7 +167,7 @@ while( trial_number < max_trials):
     trial_number += 1    
     upated_sequence.remove(onset_candidate) # remove choice from upated_sequence
     
-    clip_candidate = speech_segments [onset_candidate:onset_candidate + clip_length_frames]
+    clip_candidate = speech_segments [onset_candidate:onset_candidate + clip_length_yamnet]
     if numpy.sum(clip_candidate) >= accepted_plus:        
         accepted_onsets_yamnet.append(onset_candidate)
     
@@ -171,19 +175,19 @@ while( trial_number < max_trials):
         break
 
 print(accepted_onsets_yamnet)
-
+import math
+accepted_onsets_second = [math.floor(item * win_hope_yamnet) for item in accepted_onsets_yamnet]
+accepted_onset_logmel = [math.floor(item / win_hope_logmel) for item in accepted_onsets_second]
 #%%############################################################################
 
 """
 Collecting log-mel features for selected onsets
 
 """
-import math 
 
-accepted_onsets_second = [math.floor(item * win_hope) for item in accepted_onsets_yamnet]
-yamnet_to_logmel = int (0.48 / 0.01 )
-accepted_onset_logmel = [(item * yamnet_to_logmel) for item in accepted_onsets_yamnet]
-accepted_logmel = spectrogram_np[accepted_onset_logmel]
-accepte_embeddings = embeddings_np[accepted_onsets_yamnet]
 
-accepted_mylogmels = my_logmels[accepted_onset_logmel]
+accepted_logmels = [spectrogram_np[onset:onset + clip_length_logmel] for onset in accepted_onset_logmel]
+accepted_mylogmels = [my_logmels[onset:onset + clip_length_logmel] for onset in accepted_onset_logmel] 
+
+accepted_embeddings = [embeddings_np[onset:onset + clip_length_yamnet] for onset in accepted_onsets_yamnet]
+
