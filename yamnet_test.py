@@ -1,46 +1,29 @@
 """
-This is a simple script for running yamnet on videos
+This file is a simple script for running yamnet on a sample youtube video
 """
 
-import numpy
-import scipy
-
-#%%
 import tensorflow as tf
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = False
 config.gpu_options.per_process_gpu_memory_fraction=0.7
 sess = tf.compat.v1.Session(config=config)
 
-
-import tensorflow_hub as hub
-import csv
-
-# Load the model.
-model = hub.load('https://tfhub.dev/google/yamnet/1')
-
+import numpy
+import scipy
+kh
 #%%
 
-import matplotlib.pyplot as plt
-from IPython.display import Audio
-from scipy.io import wavfile
+"""
+This is a simple script for reading audio from video
+"""
 
-# Find the name of the class with the top score when mean-aggregated across frames.
-def class_names_from_csv(class_map_csv_text):
-  """Returns list of class names corresponding to score vector."""
-  class_names = []
-  with tf.io.gfile.GFile(class_map_csv_text) as csvfile:
-    reader = csv.DictReader(csvfile)
-    for row in reader:
-      class_names.append(row['display_name'])
+import librosa
+#import soundfile as sf
 
-  return class_names
+# wav_file_name = 'speech_whistling2.wav'
+# sample_rate, wav_data = wavfile.read(wav_file_name, 'rb')
+# sample_rate, wav_data = ensure_sample_rate(sample_rate, wav_data)
 
-class_map_path = model.class_map_path().numpy()
-class_names = class_names_from_csv(class_map_path)
-
-
-#%%
 
 def ensure_sample_rate(original_sample_rate, waveform,
                        desired_sample_rate=16000):
@@ -50,14 +33,6 @@ def ensure_sample_rate(original_sample_rate, waveform,
                                original_sample_rate * desired_sample_rate))
     waveform = scipy.signal.resample(waveform, desired_length)
   return desired_sample_rate, waveform
-
-
-#%%
-import librosa
-import soundfile as sf
-# wav_file_name = 'speech_whistling2.wav'
-# sample_rate, wav_data = wavfile.read(wav_file_name, 'rb')
-# sample_rate, wav_data = ensure_sample_rate(sample_rate, wav_data)
 
 
 # video sample
@@ -73,12 +48,42 @@ print(f'Sample rate: {sample_rate} Hz')
 print(f'Total duration: {duration:.2f}s')
 print(f'Size of the input: {len(wav_data)}')
 
-# Listening to the wav file.
-Audio(wav_data, rate=sample_rate)
 
 #%%
 
-# Executing the Model
+"""
+loading yamnet model
+
+"""
+
+import tensorflow_hub as hub
+import matplotlib.pyplot as plt
+import csv
+
+
+model = hub.load('https://tfhub.dev/google/yamnet/1')
+
+
+# Find the name of the class with the top score when mean-aggregated across frames.
+def class_names_from_csv(class_map_csv_text):
+  """Returns list of class names corresponding to score vector."""
+  class_names = []
+  with tf.io.gfile.GFile(class_map_csv_text) as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+      class_names.append(row['display_name'])
+
+  return class_names
+
+class_map_path = model.class_map_path().numpy()
+class_names = class_names_from_csv(class_map_path)
+
+#%%
+
+"""
+Executing the Model
+
+"""
 
 waveform = wav_data #/ tf.int16.max
 
@@ -92,6 +97,11 @@ print(f'The main sound is: {infered_class}')
 
 
 #%%
+
+"""
+Plotting the results
+
+"""
 
 plt.figure(figsize=(10, 6))
 
