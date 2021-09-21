@@ -35,6 +35,30 @@ print(f'Sample rate: {sample_rate} Hz')
 print(f'Total duration: {duration:.2f}s')
 print(f'Size of the input: {len(wav_data)}')
 
+
+def calculate_logmels (y , number_of_mel_bands , window_len_in_ms , window_hop_in_ms , sr_target):
+    
+    win_len_sample = int (sr_target * window_len_in_ms)
+    win_hop_sample = int (sr_target * window_hop_in_ms)
+      
+    mel_feature = librosa.feature.melspectrogram(y=y, sr=sr_target, n_fft=win_len_sample, hop_length=win_hop_sample, n_mels=number_of_mel_bands,power=2.0)
+    
+    zeros_mel = mel_feature[mel_feature==0]          
+    if numpy.size(zeros_mel)!= 0:
+        
+        mel_flat = mel_feature.flatten('F')
+        mel_temp =[value for counter, value in enumerate(mel_flat) if value!=0]
+    
+        if numpy.size(mel_temp)!=0:
+            min_mel = numpy.min(numpy.abs(mel_temp))
+        else:
+            min_mel = 1e-12 
+           
+        mel_feature[mel_feature==0] = min_mel           
+    logmel_feature = numpy.transpose(10*numpy.log10(mel_feature))       
+    return logmel_feature
+
+my_logmels = calculate_logmels (wav_data , 40 , 0.025 , 0.01 , 16000)
 #%%############################################################################
 
 """
@@ -98,14 +122,18 @@ all_max_class_indexes = scores_np.argmax(axis = 1)
 all_max_class_names = [class_names[ind] for ind in all_max_class_indexes]
 infered_class = class_names[scores_np.mean(axis=0).argmax()]
 
-# detecting speech segments
+#%%############################################################################
+
+"""
+Detecting speech segments
+
+""" 
 
 win_hope = 0.48 # s/frame
 position_frame = 446 # for example for the last frame
 position_second = position_frame * win_hope # frame/ (frame/s)
 
 
-speech_segments_zero = numpy.zeros(len(all_max_class_indexes))
 speech_segments =  [item == 0 or item == 1 or item == 2 or item == 3 for item in all_max_class_indexes]
 speech_segments = numpy.multiply(speech_segments , 1)
 plt.plot(speech_segments)
@@ -113,46 +141,49 @@ plt.plot(speech_segments)
 clip_length_seconds = 10
 clip_length_frames = int (round(clip_length_seconds / win_hope ))  # 21 frames --> almost equal to ~10 seconds of audio
 accepted_rate = 0.8
-accepted_frame_numebrs = int(round(21 * 0.8)) # 17
+accepted_plus = int(round(21 * 0.8)) # 17
 
-onset_candidate = 445 
-clip_candidate = speech_segments [onset_candidate:onset_candidate + clip_length_frames]
-clip_candidate_pass = numpy.sum(clip_candidate) >= accepted_frame_numebrs
-
-
-
-# seed the pseudorandom number generator
-# from random import seed
-# from random import randint
-# seed random number generator
-# seed(1)
-# print(randint(0,20), randint(0,20), randint(0,20))
-# from random import choice
+number_of_clips = duration / clip_length_seconds 
 
 from random import shuffle
 initial_sequence = [onset for onset in range(clip_length_frames , len(speech_segments) - clip_length_frames)] # skip first 10 seconds of the audio which is 21 frames
 
 
 max_trials = int( len(initial_sequence) / 2)
-max_len_accepted_onsets = int( len(initial_sequence) * 0.1)
+max_number_of_clips = int( duration / clip_length_seconds)
 
 trial_number = 0
-accepted_onsets = []
+accepted_onsets_yamnet = []
 upated_sequence = initial_sequence [:]
 shuffle(upated_sequence)
 
 while( trial_number < max_trials):
-    
     
     onset_candidate = upated_sequence [trial_number] # choice(upated_sequence)
     trial_number += 1    
     upated_sequence.remove(onset_candidate) # remove choice from upated_sequence
     
     clip_candidate = speech_segments [onset_candidate:onset_candidate + clip_length_frames]
-    if numpy.sum(clip_candidate) >= accepted_frame_numebrs:        
-        accepted_onsets.append(onset_candidate)
+    if numpy.sum(clip_candidate) >= accepted_plus:        
+        accepted_onsets_yamnet.append(onset_candidate)
     
-    if len(accepted_onsets) >= max_len_accepted_onsets:
+    if len(accepted_onsets_yamnet) >= max_number_of_clips:
         break
 
-print(accepted_onsets)
+print(accepted_onsets_yamnet)
+
+#%%############################################################################
+
+"""
+Collecting log-mel features for selected onsets
+
+"""
+import math 
+
+accepted_onsets_second = [math.floor(item * win_hope) for item in accepted_onsets_yamnet]
+yamnet_to_logmel = int (0.48 / 0.01 )
+accepted_onset_logmel = [(item * yamnet_to_logmel) for item in accepted_onsets_yamnet]
+accepted_logmel = spectrogram_np[accepted_onset_logmel]
+accepte_embeddings = embeddings_np[accepted_onsets_yamnet]
+
+accepted_mylogmels = my_logmels[accepted_onset_logmel]
