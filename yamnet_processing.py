@@ -127,19 +127,27 @@ clip_candidate_pass = numpy.sum(clip_candidate) >= accepted_frame_numebrs
 # seed random number generator
 # seed(1)
 # print(randint(0,20), randint(0,20), randint(0,20))
+# from random import choice
 
-from random import choice
-sequence = [onset for onset in range(clip_length_frames , len(speech_segments) - clip_length_frames)] # skip first 10 seconds of the audio which is 21 frames
-selection = choice(sequence)
+from random import shuffle
+initial_sequence = [onset for onset in range(clip_length_frames , len(speech_segments) - clip_length_frames)] # skip first 10 seconds of the audio which is 21 frames
 
-max_trials = int( len(sequence) / 2)
-max_len_accepted_onsets = int( len(sequence) * 0.1)
+
+max_trials = int( len(initial_sequence) / 2)
+max_len_accepted_onsets = int( len(initial_sequence) * 0.1)
 
 trial_number = 0
 accepted_onsets = []
+upated_sequence = initial_sequence [:]
+shuffle(upated_sequence)
+
 while( trial_number < max_trials):
-    trial_number += 1
-    onset_candidate = choice(sequence)
+    
+    
+    onset_candidate = upated_sequence [trial_number] # choice(upated_sequence)
+    trial_number += 1    
+    upated_sequence.remove(onset_candidate) # remove choice from upated_sequence
+    
     clip_candidate = speech_segments [onset_candidate:onset_candidate + clip_length_frames]
     if numpy.sum(clip_candidate) >= accepted_frame_numebrs:        
         accepted_onsets.append(onset_candidate)
@@ -147,3 +155,4 @@ while( trial_number < max_trials):
     if len(accepted_onsets) >= max_len_accepted_onsets:
         break
 
+print(accepted_onsets)
