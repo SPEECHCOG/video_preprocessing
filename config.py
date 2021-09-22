@@ -1,12 +1,17 @@
 
 
-paths = {
-  "dataset": "YOUCOOK2",
+paths = {  
   "split": "train",
   "datadir": "/tuni/groups/3101050_Specog/corpora/youcook2_dataset",
   "outputdir": "/worktmp2/hxkhkh/current/video/data/youcook2/output",
 }
 
+basic = {
+    "dataset": "YOUCOOK2",
+    "audio_model" : "yamnet", 
+    "save_results" : True,
+    "plot_results" : False
+}
 
 yamnet_settings = {
   "target_sample_rate": 16000,
@@ -18,5 +23,5 @@ yamnet_settings = {
   "class_names_accepted" : ['Speech', 'Child speech, kid speaking' , 'Conversation', 'Narration, monologue' ],
   "class_index_accepted" : [0,1,2,3],
   "clip_length_seconds" : 10,
-  "acceptance_snr" : 0.8
+  "acceptance_snr" : 0.8,
 }
