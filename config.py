@@ -2,7 +2,11 @@
 
 paths = {
   "dataset": "YOUCOOK2",
+<<<<<<< HEAD
   "split": "val",
+=======
+  "split": "train",
+>>>>>>> 8da6b0a8816acb50731fe6741e7e5675a9811dd3
   "datadir": "/tuni/groups/3101050_Specog/corpora/youcook2_dataset",
   "outputdir": "/worktmp2/hxkhkh/current/video/data/youcook2/output",
 }
