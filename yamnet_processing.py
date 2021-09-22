@@ -191,3 +191,51 @@ accepted_mylogmels = [my_logmels[onset:onset + clip_length_logmel] for onset in 
 
 accepted_embeddings = [embeddings_np[onset:onset + clip_length_yamnet] for onset in accepted_onsets_yamnet]
 
+
+#%%############################################################################
+
+"""
+Saving results for candidate onsets in one dictionary
+
+"""
+
+import pickle
+
+dict_out = {}
+dict_out[wav_file_name] = accepted_onsets_second
+
+
+outputfile = "../data/output/onsets/testp"
+
+with open(outputfile, 'wb') as handle:
+    pickle.dump(dict_out, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    
+with open("../data/output/onsets/testp", 'rb') as handle:
+    b = pickle.load(handle)
+    
+#%%############################################################################
+
+"""
+Saving audio features each in a seprate dictionary
+
+"""
+
+
+import os
+
+counter = 1
+output_path ="../data/output/" + "train/" + str(counter) 
+os.mkdir(output_path)
+output_name =  output_path + '/af'
+dict_out = {}
+dict_out['video_name'] = wav_file_name
+dict_out['onsets_second'] = accepted_onsets_second
+dict_out['logmel40'] = accepted_mylogmels
+dict_out['logmel64'] = accepted_logmels
+dict_out['embeddings'] = accepted_embeddings
+
+with open(output_name, 'wb') as handle:
+    pickle.dump(dict_out, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    
+with open(output_name, 'rb') as handle:
+    c = pickle.load(handle)
