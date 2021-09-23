@@ -2,8 +2,8 @@
 
 paths = {  
   "split": "train",
-  "datadir": "/worktmp2/hxkhkh/current/video/data/example/input", #"/tuni/groups/3101050_Specog/corpora/youcook2_dataset",
-  "outputdir": "../data/youcook2/output",
+  "datadir": "/worktmp2/hxkhkh/current/video/data/example/input/", #"/tuni/groups/3101050_Specog/corpora/youcook2_dataset",
+  "outputdir": "/worktmp2/hxkhkh/current/video/data/example/output/train/" #../data/youcook2/output",
 }
 
 basic = {
@@ -24,4 +24,5 @@ yamnet_settings = {
   "class_index_accepted" : [0,1,2,3],
   "clip_length_seconds" : 10,
   "acceptance_snr" : 0.8,
+  "skip_seconds" : 3
 }
