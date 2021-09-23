@@ -27,5 +27,5 @@ run_analysis = Analysis( audio_model,dataset, datadir,outputdir,split, yamnet_se
 run_analysis()
 
 import pickle
-with open("/worktmp2/hxkhkh/current/video/data/example/output/train/3/af", 'rb') as handle:
+with open("/worktmp2/hxkhkh/current/video/data/example/output/train/train_onsets", 'rb') as handle:
     b = pickle.load(handle)

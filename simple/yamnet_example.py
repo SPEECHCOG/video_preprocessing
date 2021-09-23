@@ -23,7 +23,7 @@ import librosa
 
 
 # video sample
-wav_file_name = "/worktmp2/hxkhkh/current/video/data/example/input/101_3rtzSsuJ4Ng.mp4.webm"
+wav_file_name = "/worktmp2/hxkhkh/current/video/data/example/input/train/108_soByLvI6SSY.mp4"
 wav_original, sample_rate = librosa.load(wav_file_name , mono=True)
 
 wav_data = librosa.core.resample(wav_original, sample_rate, 16000) 
@@ -206,12 +206,12 @@ dict_out = {}
 dict_out[wav_file_name] = accepted_onsets_second
 
 
-outputfile = "../data/output/onsets/testp"
+outputfile = "/worktmp2/hxkhkh/current/video/data/example/output/onsets_testiiing"
 
 with open(outputfile, 'wb') as handle:
     pickle.dump(dict_out, handle, protocol=pickle.HIGHEST_PROTOCOL)
     
-with open("../data/output/onsets/testp", 'rb') as handle:
+with open("/worktmp2/hxkhkh/current/video/data/example/output/", 'rb') as handle:
     b = pickle.load(handle)
     
 #%%############################################################################
@@ -225,7 +225,7 @@ Saving audio features each in a seprate dictionary
 import os
 
 counter = 1
-output_path ="../data/output/" + "train/" + str(counter) 
+output_path = "/worktmp2/hxkhkh/current/video/data/example/output/" + str(counter) 
 os.mkdir(output_path)
 output_name =  output_path + '/af'
 dict_out = {}

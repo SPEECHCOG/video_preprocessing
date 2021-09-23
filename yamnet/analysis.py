@@ -11,7 +11,7 @@ import tensorflow_hub as hub
 
 class Analysis:
     
-    def __init__(self,audio_model,dataset, datadir,outputdir, split , yamnet_settings):
+    def __init__(self,audio_model,dataset, datadir, outputdir, split , yamnet_settings):
         
         self.audio_model = audio_model
         self.dataset = dataset
@@ -28,7 +28,7 @@ class Analysis:
         self.clip_length_yamnet = int (round(self.clip_length_seconds / self.win_hope_yamnet ))
         self.clip_length_logmel = int (round(self.clip_length_seconds / self.win_hope_logmel))
         
-        self.counter = 1
+        self.counter = 0
         self.video_name = ''
         self.video_duration = 0
 
@@ -37,13 +37,14 @@ class Analysis:
     def create_video_list (self ):
         # use npath and take name of all videos
         # return video name list
-        video_list = os.listdir(self.datadir)
+        video_dir = os.path.join(self.datadir, self.split)
+        video_list = os.listdir(video_dir)
         return video_list
     
     def load_video (self):
         
         video_name = self.video_name
-        video_path = os.path.join(self.datadir, video_name) 
+        video_path = os.path.join(self.datadir,self.split, video_name) 
         target_sr = self.yamnet_settings ["target_sample_rate"]
         wav_data, sample_rate = librosa.load(video_path , sr=target_sr , mono=True)        
         duration = len(wav_data)/target_sr
@@ -145,7 +146,7 @@ class Analysis:
     
     def update_onset_list (self, accepted_onsets_second):
         
-        self.dict_onsets[self.video_name] = accepted_onsets_second
+        self.dict_onsets[self.video_name] = {'onsets': accepted_onsets_second , 'folder_name':self.counter}
         
     
     def save_per_video (self, logmel_yamnet, embeddings_yamnet, logmels , onsets_yamnet , onsets_second , onsets_logmel):
@@ -157,8 +158,8 @@ class Analysis:
         accepted_logmels = [logmels[onset:onset + clip_length_logmel] for onset in onsets_logmel] 
         accepted_embeddings = [embeddings_yamnet[onset:onset + clip_length_yamnet] for onset in onsets_yamnet]
         
-        counter = self.counter
-        output_path = self.outputdir + str(counter)
+        
+        output_path = self.outputdir + str(self.counter)
         os.mkdir(output_path)
         output_name = output_path  + '/af'
         dict_out = {}
@@ -172,13 +173,14 @@ class Analysis:
         
         with open(output_name, 'wb') as handle:
             pickle.dump(dict_out, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        self.counter = counter + 1   
+          
         
     
     def __call__ (self):
         # call above functions one by one
         video_list = self.create_video_list()
-        for video_name in video_list:
+        
+        for video_name in video_list:         
             self.video_name = video_name
             # do all analysis
             wav_data = self.load_video ()
@@ -189,5 +191,8 @@ class Analysis:
             self.update_onset_list (onsets_second)
             self.save_per_video ( logmel_yamnet, embeddings_yamnet, logmels , onsets_yamnet , onsets_second , onsets_logmel)
             
-        with open(self.outputdir + self.split + '_onsets' , 'wb') as handle:
+            self.counter += 1
+            
+        output_name =  self.outputdir + self.split + '_onsets'  
+        with open(output_name , 'wb') as handle:
             pickle.dump(self.dict_onsets, handle, protocol=pickle.HIGHEST_PROTOCOL)
