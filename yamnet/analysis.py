@@ -1,5 +1,5 @@
 
-
+import os
 
 class Analysis:
     
@@ -16,7 +16,8 @@ class Analysis:
     def create_video_list (self ):
         # use npath and take name of all videos
         # return video name list
-        pass
+        listdir = os.listdir(self.datadir)
+        return listdir
     
     def load_video (self):
         # use librosa to load one given video
@@ -62,4 +63,5 @@ class Analysis:
     
     def __call__ (self):
         # call above functions one by one
+        print(self.create_video_list())
         pass
