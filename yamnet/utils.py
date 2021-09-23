@@ -43,6 +43,10 @@ def ensure_sample_rate(original_sample_rate, waveform,
   return desired_sample_rate, waveform
 
 
+def resample_audio (wav_original, sample_rate):
+    wav_data = librosa.core.resample(wav_original, sample_rate, 16000) 
+    return wav_data
+
 
 """
 loading yamnet model
@@ -59,6 +63,8 @@ def class_names_from_csv(class_map_csv_text):
 
   return class_names
 
+
+
 def load_yamnet_model():
 
     model = hub.load('https://tfhub.dev/google/yamnet/1')
@@ -73,5 +79,29 @@ def load_yamnet_model():
     
     return model, class_map_path, class_names
 
+"""
+calculating log-mel features
 
+"""
 
+def calculate_logmels (y , number_of_mel_bands , window_len_in_ms , window_hop_in_ms , sr_target):
+    
+    win_len_sample = int (sr_target * window_len_in_ms)
+    win_hop_sample = int (sr_target * window_hop_in_ms)
+      
+    mel_feature = librosa.feature.melspectrogram(y=y, sr=sr_target, n_fft=win_len_sample, hop_length=win_hop_sample, n_mels=number_of_mel_bands,power=2.0)
+    
+    zeros_mel = mel_feature[mel_feature==0]          
+    if numpy.size(zeros_mel)!= 0:
+        
+        mel_flat = mel_feature.flatten('F')
+        mel_temp =[value for counter, value in enumerate(mel_flat) if value!=0]
+    
+        if numpy.size(mel_temp)!=0:
+            min_mel = numpy.min(numpy.abs(mel_temp))
+        else:
+            min_mel = 1e-12 
+           
+        mel_feature[mel_feature==0] = min_mel           
+    logmel_feature = numpy.transpose(10*numpy.log10(mel_feature))       
+    return logmel_feature

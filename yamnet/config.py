@@ -2,7 +2,7 @@
 
 paths = {  
   "split": "train",
-  "datadir": "../data/example/input", #"/tuni/groups/3101050_Specog/corpora/youcook2_dataset",
+  "datadir": "/worktmp2/hxkhkh/current/video/data/example/input", #"/tuni/groups/3101050_Specog/corpora/youcook2_dataset",
   "outputdir": "../data/youcook2/output",
 }
 
@@ -15,7 +15,7 @@ basic = {
 
 yamnet_settings = {
   "target_sample_rate": 16000,
-  "logmel_band": 40,
+  "logmel_bands": 40,
   "win_length_logmel": 0.025,
   "win_hope_logmel":0.01,
   "win_length_yamnet" : 0.96,

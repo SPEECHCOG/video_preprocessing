@@ -23,7 +23,7 @@ import librosa
 
 
 # video sample
-wav_file_name = "../data/input/101_3rtzSsuJ4Ng.mp4.webm"
+wav_file_name = "/worktmp2/hxkhkh/current/video/data/example/input/101_17v08qtr8UM.mp4.webm"
 wav_original, sample_rate = librosa.load(wav_file_name , mono=True)
 #sf.write("../data/output/101_2Ihlw5FFrx4_sr.wav", wav_data, sample_rate)
 wav_data = librosa.core.resample(wav_original, sample_rate, 16000) 
@@ -106,7 +106,7 @@ waveform = wav_data
 
 # Run the model, check the output.
 scores, embeddings, log_mel_spectrogram = model(waveform)
-
+kh
 # asserting the output
 scores.shape.assert_is_compatible_with([None, 521])
 embeddings.shape.assert_is_compatible_with([None, 1024])

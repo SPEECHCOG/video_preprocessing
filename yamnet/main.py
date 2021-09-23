@@ -24,4 +24,8 @@ yamnet_settings = cfg.yamnet_settings
 from analysis import Analysis
 
 run_analysis = Analysis( audio_model,dataset, datadir,outputdir,split, yamnet_settings )
-run_analysis
+mylist = run_analysis.create_video_list()
+
+wav_data, duration = run_analysis.load_video(mylist[2])
+my_logmel = run_analysis.extract_logmel_features (wav_data)
+scores, embeddings, log_mel_yamnet =  run_analysis.execute_yamnet (mylist[2])
