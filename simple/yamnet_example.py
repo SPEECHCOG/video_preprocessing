@@ -19,13 +19,13 @@ This is a simple script for reading audio from video
 """
 
 import librosa
-#import soundfile as sf
+
 
 
 # video sample
-wav_file_name = "/worktmp2/hxkhkh/current/video/data/example/input/101_17v08qtr8UM.mp4.webm"
+wav_file_name = "/worktmp2/hxkhkh/current/video/data/example/input/101_3rtzSsuJ4Ng.mp4.webm"
 wav_original, sample_rate = librosa.load(wav_file_name , mono=True)
-#sf.write("../data/output/101_2Ihlw5FFrx4_sr.wav", wav_data, sample_rate)
+
 wav_data = librosa.core.resample(wav_original, sample_rate, 16000) 
 
 # Show some basic information about the audio.
@@ -106,7 +106,7 @@ waveform = wav_data
 
 # Run the model, check the output.
 scores, embeddings, log_mel_spectrogram = model(waveform)
-kh
+
 # asserting the output
 scores.shape.assert_is_compatible_with([None, 521])
 embeddings.shape.assert_is_compatible_with([None, 1024])
@@ -144,34 +144,35 @@ clip_length_yamnet = int (round(clip_length_seconds / win_hope_yamnet ))  # 21 f
 clip_length_logmel = int (round(clip_length_seconds / win_hope_logmel)) # 1000 frames
 
 
-accepted_rate = 0.8
-accepted_plus = int(round(21 * 0.8)) # 17
-
-number_of_clips = duration / clip_length_seconds 
-
 from random import shuffle
-initial_sequence = [onset for onset in range(clip_length_yamnet , len(speech_segments) - clip_length_yamnet)] # skip first 10 seconds of the audio which is 21 frames
 
+accepted_rate = 0.8
+accepted_plus = int(round(clip_length_yamnet * 0.8)) # e.g. for clip of 10 seconds: 21* 0.8 = 17
 
-max_trials = int( len(initial_sequence) / 2)
-max_number_of_clips = int( duration / clip_length_seconds)
+number_of_clips = int( duration / clip_length_seconds) 
 
-trial_number = 0
+start_frame = 21 # skip first 10 seconds of the audio which is 21 yamnet frames
+end_frame = len(speech_segments) - clip_length_yamnet
+
+skip_seconds = 3
+skip_frames_yamnet = int(round(skip_seconds/ win_hope_yamnet))
+initial_sequence = [ onset for onset in range(start_frame , end_frame , 6) ]  # sample every 3 * one second (which is ~2 yamnet frames)
+
+trial_index = len(initial_sequence) -1 
 accepted_onsets_yamnet = []
 upated_sequence = initial_sequence [:]
 shuffle(upated_sequence)
 
-while( trial_number < max_trials):
+# scan from end to start not to loose any member due to updated list
+while( trial_index >=  0):
     
-    onset_candidate = upated_sequence [trial_number] # choice(upated_sequence)
-    trial_number += 1    
-    upated_sequence.remove(onset_candidate) # remove choice from upated_sequence
-    
-    clip_candidate = speech_segments [onset_candidate:onset_candidate + clip_length_yamnet]
+    onset_candidate = upated_sequence [trial_index] # choice(upated_sequence)
+    trial_index -= 1    
+    upated_sequence.remove(onset_candidate) # remove choice from upated_sequence  
+    clip_candidate = speech_segments [onset_candidate: onset_candidate + clip_length_yamnet]
     if numpy.sum(clip_candidate) >= accepted_plus:        
-        accepted_onsets_yamnet.append(onset_candidate)
-    
-    if len(accepted_onsets_yamnet) >= max_number_of_clips:
+        accepted_onsets_yamnet.append(onset_candidate)  
+    if len(accepted_onsets_yamnet) >= number_of_clips:
         break
 
 print(accepted_onsets_yamnet)
@@ -239,3 +240,17 @@ with open(output_name, 'wb') as handle:
     
 with open(output_name, 'rb') as handle:
     c = pickle.load(handle)
+    
+#%%############################################################################
+
+"""
+Saving audio features each in a seprate dictionary
+
+"""
+
+import soundfile as sf
+duration = len(wav_data)/16000
+for second in accepted_onsets_second:
+
+    wav_clip = wav_data[int(second *16000 ): int((second + 10)*16000 )]
+    bool_check = sf.write("/worktmp2/hxkhkh/current/video/data/example/output/" + str(int(second)) + ".wav", wav_clip, 16000)
