@@ -2,8 +2,8 @@
 
 paths = {  
   "split": "train",
-  "datadir": "/worktmp2/hxkhkh/current/video/data/example/input/", #"/tuni/groups/3101050_Specog/corpora/youcook2_dataset",
-  "outputdir": "/worktmp2/hxkhkh/current/video/data/example/output/train/" #../data/youcook2/output",
+  "datadir": "/tuni/groups/3101050_Specog/corpora/youcook2_dataset",
+  "outputdir": "../data/youcook2/output/"
 }
 
 basic = {
