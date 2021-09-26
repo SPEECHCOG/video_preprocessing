@@ -33,6 +33,7 @@ class Analysis:
         self.video_duration = 0
 
         self.dict_onsets = {}
+        self.dict_errors = {}
         
     def create_video_list (self ):
         
@@ -45,6 +46,7 @@ class Analysis:
         video_name = self.video_name
         video_path = os.path.join(self.datadir,self.split, video_name) 
         target_sr = self.yamnet_settings ["target_sample_rate"]
+        
         wav_data, sample_rate = librosa.load(video_path , sr=target_sr , mono=True)        
         duration = len(wav_data)/target_sr
         self.video_duration = duration
@@ -143,7 +145,9 @@ class Analysis:
         
         self.dict_onsets[self.video_name] = {'onsets': accepted_onsets_second , 'folder_name':self.counter}
 
+    def update_error_list (self):
         
+        self.dict_errors[self.counter] = self.video_name       
     
     def save_per_video (self, logmel_yamnet, embeddings_yamnet, logmels , onsets_yamnet , onsets_second , onsets_logmel):
  
@@ -174,15 +178,22 @@ class Analysis:
         for video_name in video_list:         
             self.video_name = video_name
             # do all analysis
-            wav_data = self.load_video ()
-            logmels = self.extract_logmel_features (wav_data)
-            scores_yamnet, embeddings_yamnet, logmel_yamnet = self.execute_yamnet(wav_data)
-            speech_segments = self.detect_speech_frames(scores_yamnet)
-            onsets_yamnet , onsets_second , onsets_logmel = self.produce_onset_candidates (speech_segments)
-            self.update_onset_list (onsets_second)
-            self.save_per_video ( logmel_yamnet, embeddings_yamnet, logmels , onsets_yamnet , onsets_second , onsets_logmel)    
+            try:
+                wav_data = self.load_video ()
+                logmels = self.extract_logmel_features (wav_data)
+                scores_yamnet, embeddings_yamnet, logmel_yamnet = self.execute_yamnet(wav_data)
+                speech_segments = self.detect_speech_frames(scores_yamnet)
+                onsets_yamnet , onsets_second , onsets_logmel = self.produce_onset_candidates (speech_segments)
+                self.update_onset_list (onsets_second)
+                self.save_per_video ( logmel_yamnet, embeddings_yamnet, logmels , onsets_yamnet , onsets_second , onsets_logmel)    
+            except:
+                self.update_error_list()
             self.counter += 1
             
         output_name =  self.outputdir + self.split + '_onsets'  
         with open(output_name , 'wb') as handle:
             pickle.dump(self.dict_onsets, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        output_name =  self.outputdir + self.split + '_errors'  
+        with open(output_name , 'wb') as handle:
+            pickle.dump(self.dict_errors, handle, protocol=pickle.HIGHEST_PROTOCOL)
