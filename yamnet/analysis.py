@@ -75,8 +75,8 @@ class Analysis:
     
     def execute_yamnet (self, wavedata ): 
         
-        model = hub.load('https://tfhub.dev/google/yamnet/1')
-        scores, embeddings, log_mel_yamnet = model(wavedata)       
+        
+        scores, embeddings, log_mel_yamnet = self.model(wavedata)       
         scores_np = scores.numpy()
         logmel_yamnet_np = log_mel_yamnet.numpy()
         embeddings_np = embeddings.numpy()
@@ -174,7 +174,8 @@ class Analysis:
     
     def __call__ (self):
         
-        video_list = self.create_video_list()       
+        video_list = self.create_video_list()
+        self.model = hub.load('https://tfhub.dev/google/yamnet/1')
         for video_name in video_list:         
             self.video_name = video_name
             # do all analysis
@@ -188,6 +189,8 @@ class Analysis:
                 self.save_per_video ( logmel_yamnet, embeddings_yamnet, logmels , onsets_yamnet , onsets_second , onsets_logmel)    
             except:
                 self.update_error_list()
+
+
             self.counter += 1
             
         output_name =  self.outputdir + self.split + '_onsets'  
