@@ -22,12 +22,14 @@ video_settings = cfg.video_settings
 ###############################################################################
 
 from analysis import Analysis
+from vfe import VisualFeatureExtractor
+#run_analysis = Analysis( audio_model,dataset, datadir,outputdir,split, video_settings )
+#vgg_feature_extractor = VisualFeatureExtractor( audio_model,dataset, datadir,outputdir,split, video_settings )
+#vgg_feature_extractor()
 
-run_analysis = Analysis( audio_model,dataset, datadir,outputdir,split, video_settings )
-run_analysis()
 
-# import pickle
-# with open("/worktmp/khorrami/project_5/video/data/youcook2/output/test/0/af", 'rb') as handle:
-#     b = pickle.load(handle)
+import pickle
+with open("/worktmp/khorrami/project_5/video/data/youcook2/output/test/147/af", 'rb') as handle:
+    b = pickle.load(handle)
     
 # run_analysis.split
