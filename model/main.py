@@ -1,14 +1,21 @@
 from model import Net
 ###############################################################################
 
-import tensorflow as tf
-config = tf.compat.v1.ConfigProto()
-config.gpu_options.allow_growth = False
-config.gpu_options.per_process_gpu_memory_fraction=0.7
-sess = tf.compat.v1.Session(config=config)
+# import tensorflow as tf
+# config = tf.compat.v1.ConfigProto()
+# config.gpu_options.allow_growth = False
+# config.gpu_options.per_process_gpu_memory_fraction=0.7
+# sess = tf.compat.v1.Session(config=config)
 
 ###############################################################################
-   
+
+# import tensorflow as tf
+# config = tf.ConfigProto()
+# config.gpu_options.allow_growth = False
+# config.gpu_options.per_process_gpu_memory_fraction=0.7
+# sess = tf.Session(config=config)
+ 
+###############################################################################  
 import config as cfg
 
 split = cfg.paths['split']
