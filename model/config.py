@@ -10,6 +10,8 @@ basic = {
     "audio_model" : "yamnet",
     "visual_model": "resnet152", 
     "layer_name": "avg_pool",
+    "audiochannel" : "resDAVEnet",
+    "loss" : "triplet",
     "save_results" : True,
     "plot_results" : False
 }
