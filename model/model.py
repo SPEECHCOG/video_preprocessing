@@ -13,7 +13,7 @@ from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Lambda
 
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import  Input, Reshape, Dense, Dropout, BatchNormalization, dot
+from tensorflow.keras.layers import  Input, Reshape, Dense, Dropout, BatchNormalization, dot, Softmax, Permute
 from tensorflow.keras.layers import  MaxPooling1D,AveragePooling1D,  Conv1D, Concatenate, ReLU, Add, Multiply
 from tensorflow.keras.optimizers import Adam
 
@@ -175,9 +175,30 @@ class Net():
         x2 = Conv1D(1024,9,strides = 2, padding="same")(x1)  
         x1downsample = Conv1D(1024,9,strides = 2, padding="same")(x1)
         out = Add()([x1downsample,x2])
-        out_4 = ReLU()(out)   # (64, 1024)     
-
-        out_audio_channel  = AveragePooling1D(64,padding='same')(out_4) # change this to averagepooling for triplet loss
+        out_4 = ReLU()(out)   # (64, 1024)  
+        
+        # self attention
+        input_attention = out_4
+        query = input_attention
+        key = input_attention
+        value = Permute((2,1))(input_attention)
+        
+        score = dot([query,key], normalize=False, axes=-1,name='scoreA')
+        weight = Softmax(name='weigthA')(score)
+        attention = dot([weight, value], normalize=False, axes=-1,name='attentionA')
+        
+        poolAtt = AveragePooling1D(64, padding='same')(attention) # N, 1, 1024
+        
+        poolquery = AveragePooling1D(64, padding='same')(query)# N, 1, 1024
+        
+        outAtt = Concatenate(axis=-1)([poolAtt, poolquery])
+        outAtt = Reshape([2048],name='reshape_out_attA')(outAtt)
+        out_audio_channel = outAtt
+        
+        # poling
+        # out_audio_channel  = AveragePooling1D(64,padding='same')(out_4) 
+        # out_audio_channel = Reshape([out_audio_channel.shape[2]],name='reshape_audio')(out_audio_channel) 
+        
         
         audio_model = Model(inputs= audio_sequence, outputs = out_audio_channel )
         audio_model.summary()
@@ -192,9 +213,28 @@ class Net():
         forward_visual = Conv1D(1024,3,strides=1,padding = "same", activation='relu', name = 'conv_visual')(visual_sequence)
         dr_visual = Dropout(dropout_size,name = 'dr_visual')(forward_visual)
         bn_visual = BatchNormalization(axis=-1,name = 'bn1_visual')(dr_visual)
-       
-        pool_visual = MaxPooling1D(10,padding='same')(bn_visual)
-        out_visual_channel = pool_visual
+        
+        # self attention
+        input_attention = bn_visual
+        query = input_attention
+        key = input_attention
+        value = Permute((2,1))(input_attention)
+        
+        score = dot([query,key], normalize=False, axes=-1,name='scoreV')
+        weight = Softmax(name='weigthV')(score)
+        attention = dot([weight, value], normalize=False, axes=-1,name='attentionV')
+        
+        poolAtt = AveragePooling1D(10, padding='same')(attention) # N, 1, 1024
+        
+        poolquery = AveragePooling1D(10, padding='same')(query)# N, 1, 1024
+        
+        outAtt = Concatenate(axis=-1)([poolAtt, poolquery])
+        outAtt = Reshape([2048],name='reshape_out_attV')(outAtt)
+        # max pooling
+        #pool_visual = MaxPooling1D(10,padding='same')(bn_visual)
+        #out_visual_channel = Reshape([out_visual_channel.shape[2]],name='reshape_visual')(out_visual_channel)
+        
+        out_visual_channel = outAtt
          
         visual_model = Model(inputs= visual_sequence, outputs = out_visual_channel )
         visual_model.summary()
@@ -209,15 +249,17 @@ class Net():
         elif  self.audiochannel=="simplenet": 
             audio_sequence , out_audio_channel , audio_model = self.build_simple_audio_model (Xshape)
  
-        V = Reshape([out_visual_channel.shape[2]],name='reshape_visual')(out_visual_channel)
-        A = Reshape([out_audio_channel.shape[2]],name='reshape_audio')(out_audio_channel) 
-  
-        gatedV_1 = Dense(1024)(V)
-        gatedV_2 = Dense(1024,activation = 'sigmoid')(gatedV_1)        
+        # V = Reshape([out_visual_channel.shape[2]],name='reshape_visual')(out_visual_channel)
+        # A = Reshape([out_audio_channel.shape[2]],name='reshape_audio')(out_audio_channel) 
+        V = out_visual_channel
+        A = out_audio_channel
+        gate_size = 2048
+        gatedV_1 = Dense(gate_size)(V)
+        gatedV_2 = Dense(gate_size,activation = 'sigmoid')(gatedV_1)        
         gatedV = Multiply(name= 'multiplyV')([gatedV_1, gatedV_2])
 
-        gatedA_1 = Dense(1024)(A)
-        gatedA_2 = Dense(1024,activation = 'sigmoid')(gatedA_1)        
+        gatedA_1 = Dense(gate_size)(A)
+        gatedA_2 = Dense(gate_size,activation = 'sigmoid')(gatedA_1)        
         gatedA = Multiply(name= 'multiplyA')([gatedA_1, gatedA_2])
                 
         
