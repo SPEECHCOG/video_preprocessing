@@ -14,7 +14,7 @@ from tensorflow.keras.layers import Lambda
 
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import  Input, Reshape, Dense, Dropout, BatchNormalization, dot
-from tensorflow.keras.layers import  MaxPooling1D,AveragePooling1D,  Conv1D, Concatenate, ReLU, Add
+from tensorflow.keras.layers import  MaxPooling1D,AveragePooling1D,  Conv1D, Concatenate, ReLU, Add, Multiply
 from tensorflow.keras.optimizers import Adam
 
 
@@ -177,8 +177,8 @@ class Net():
         out = Add()([x1downsample,x2])
         out_4 = ReLU()(out)   # (64, 1024)     
 
-        out_audio_channel  = MaxPooling1D(64,padding='same')(out_4) # change this to averagepooling for triplet loss
-        out_audio_channel = Reshape([out_audio_channel.shape[2]],name='reshape_audio')(out_audio_channel) 
+        out_audio_channel  = AveragePooling1D(64,padding='same')(out_4) # change this to averagepooling for triplet loss
+        
         audio_model = Model(inputs= audio_sequence, outputs = out_audio_channel )
         audio_model.summary()
         return audio_sequence , out_audio_channel , audio_model   
@@ -195,7 +195,7 @@ class Net():
        
         pool_visual = MaxPooling1D(10,padding='same')(bn_visual)
         out_visual_channel = pool_visual
-        out_visual_channel = Reshape([out_visual_channel.shape[2]],name='reshape_visual')(out_visual_channel) 
+         
         visual_model = Model(inputs= visual_sequence, outputs = out_visual_channel )
         visual_model.summary()
         return visual_sequence , out_visual_channel , visual_model
@@ -209,23 +209,23 @@ class Net():
         elif  self.audiochannel=="simplenet": 
             audio_sequence , out_audio_channel , audio_model = self.build_simple_audio_model (Xshape)
  
-        V = out_visual_channel
-        A = out_audio_channel
-        
+        V = Reshape([out_visual_channel.shape[2]],name='reshape_visual')(out_visual_channel)
+        A = Reshape([out_audio_channel.shape[2]],name='reshape_audio')(out_audio_channel) 
+  
         gatedV_1 = Dense(1024)(V)
         gatedV_2 = Dense(1024,activation = 'sigmoid')(gatedV_1)        
-        gatedV = Concatenate(axis=-1)([gatedV_1, gatedV_2])
+        gatedV = Multiply(name= 'multiplyV')([gatedV_1, gatedV_2])
 
         gatedA_1 = Dense(1024)(A)
         gatedA_2 = Dense(1024,activation = 'sigmoid')(gatedA_1)        
-        gatedA = Concatenate(axis=-1)([gatedA_1, gatedA_2])
+        gatedA = Multiply(name= 'multiplyA')([gatedA_1, gatedA_2])
                 
         
         mapIA = dot([gatedV,gatedA],axes=-1,normalize = True,name='dot_matchmap')     
         final_model = Model(inputs=[visual_sequence, audio_sequence], outputs = mapIA )
         
-        visual_embedding_model = Model(inputs=visual_sequence, outputs= V, name='visual_embedding_model')
-        audio_embedding_model = Model(inputs=audio_sequence,outputs= A, name='visual_embedding_model')
+        visual_embedding_model = Model(inputs=visual_sequence, outputs = gatedV, name='visual_embedding_model')
+        audio_embedding_model = Model(inputs=audio_sequence, outputs = gatedA, name='audio_embedding_model')
         final_model.summary()
         
         final_model.compile(loss=triplet_loss, optimizer= Adam(lr=1e-04))
@@ -289,7 +289,7 @@ class Net():
         
         
         
-        for epoch in range(30):
+        for epoch in range(50):
             Ytrain, Xtrain, bin_train = prepare_triplet_data (audio_features , visual_features)
             final_model.fit([Ytrain,Xtrain], bin_train, shuffle=False, epochs=1, batch_size=120) 
             final_model.evaluate([Ytest,Xtest], bin_val, batch_size=120)
@@ -297,8 +297,8 @@ class Net():
 
             audio_embeddings = audio_embedding_model.predict(audio_features_test)    
             visual_embeddings = visual_embedding_model.predict(visual_features_test) 
-            audio_embeddings = numpy.squeeze(audio_embeddings)
-            visual_embeddings = numpy.squeeze(visual_embeddings)
+            # audio_embeddings = numpy.squeeze(audio_embeddings)
+            # visual_embeddings = numpy.squeeze(visual_embeddings)
             
             ########### calculating Recall@10                    
             poolsize =  1000
