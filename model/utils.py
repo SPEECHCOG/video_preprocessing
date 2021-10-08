@@ -7,7 +7,7 @@ import tensorflow as tf
 import scipy.spatial as ss
 
 
-from tensorflow.keras import backend as K
+from keras import backend as K
 
 
 def triplet_loss(y_true,y_pred):    
@@ -65,15 +65,31 @@ def normalizeX (dict_logmel, len_of_longest_sequence):
        X[k,len_of_longest_sequence-len(logmel_item):, :] = logmel_item
     return X
 
-def prepare_triplet_data (Xdata , Ydata):
-    n_samples = len(Ydata)
+def prepare_triplet_data (audio_features , visual_features):
+    n_samples = len(visual_features)
     orderX,orderY = randOrderTriplet(n_samples)
     bin_triplet = numpy.array(make_bin_target(n_samples)) 
-    Ydata_triplet = Ydata[orderY]
-    Xdata_triplet = Xdata[orderX]
+    Ydata_triplet = visual_features[orderY]
+    Xdata_triplet = audio_features[orderX]
     return Ydata_triplet, Xdata_triplet, bin_triplet   
 
 
+
+
+
+def prepare_data (audio_features , visual_features , loss):
+    if loss =='triplet':
+        Ydata, Xdata, target = prepare_triplet_data (audio_features , visual_features)
+    else:
+        
+        n_samples = len(audio_features) 
+        random_order = numpy.random.permutation(int(n_samples))
+        
+        Ydata = visual_features[random_order ]
+        Xdata = audio_features[random_order ]
+     
+        target = numpy.ones( n_samples)
+    return Ydata, Xdata , target
 
 def calculate_recallat10( embedding_1,embedding_2, sampling_times, number_of_all_audios, pool):   
     recall_all = []
@@ -94,52 +110,6 @@ def calculate_recallat10( embedding_1,embedding_2, sampling_times, number_of_all
         del distance_utterance  
         
     return recall_all
-
-
-def prepare_data (audio_features , visual_features):
- 
-    n_samples = len(audio_features) 
-    random_order = numpy.random.permutation(int(n_samples))
-    
-    Ydata_rand = visual_features[random_order ]
-    Xdata_rand = audio_features[random_order ]
- 
-    target = numpy.ones( n_samples)
-    return Ydata_rand, Xdata_rand , target
-
-def mms_loss_alignment(y_true , y_pred): 
-    
-    out_visual = y_pred [:,0,:]
-    out_audio = y_pred [:,1,:]   
-    
-    out_visual = K.expand_dims(out_visual, 0)
-    out_audio = K.expand_dims(out_audio, 0)
-    print(out_visual.shape)
-    
-    S = K.squeeze( K.batch_dot(out_audio, out_visual,axes=[-1,-1]) , axis = 0)
-    
-    print(S.shape)
-    # ......................................................
-    P1 = K.softmax(S, axis = 0) #row-wise softmax
-    P2 = K.softmax(S, axis = 1) #column-wise softmax
-    
-    P1 = P1 + 0.005
-    P2 = P2 + 0.005
-    
-    Y_hat1 = tf.linalg.diag_part (P1)
-    Y_hat2 = tf.linalg.diag_part (P2)
-    
-    # ......................................................
-    
-    I2C_loss = K.sum ( - (K.log(Y_hat1)) , axis = 0)
-    C2I_loss = K.sum ( -  (K.log(Y_hat2)) , axis = 0) 
-    
-    loss = I2C_loss + C2I_loss
-    
-    print('loss shape')
-    
-    return loss 
-
     
 
 def mms_loss(y_true , y_pred): 
@@ -155,38 +125,39 @@ def mms_loss(y_true , y_pred):
     out_visual = y_pred [:,0,:]
     out_audio = y_pred [:,1,:]
 
-    
+    print('this isout_visual before expand dim')
+    print(out_visual.shape)
+    out_visual = y_pred [:,0,:]
+    out_audio = y_pred [:,1,:]
     out_visual = K.expand_dims(out_visual, 0)
     out_audio = K.expand_dims(out_audio, 0)
- 
-    S = K.squeeze( K.batch_dot(out_audio, out_visual,axes=[-1,-1]) , axis = 0)
-    
+
+
+
+    S = K.squeeze( K.batch_dot(out_audio, out_visual, axes=[-1,-1]) , axis = 0)
+       
     # ...................................................... method 0
-    # margine = 0.1
-    # def margine_softmax(S ,margine):
-        
-    #     S_diag =  tf.linalg.diag_part (S) 
-    #     factor = K.exp(S_diag + margine)
-    #     output = 1 / ( 1 + (factor) * ( K.sum(K.exp(S) , axis = 0) - K.exp(S_diag)) )
-    #     return output
+    margine = 0.01
+
+    def margine_softmax(Sinitial ,margine):
+        S = Sinitial - K.max(Sinitial, axis = 0)    
+        S_diag =  tf.linalg.diag_part (S) 
+        S_diag_margin = K.exp(S_diag - margine)
+        Factor = K.exp(S_diag)
+        S_sum = K.sum(K.exp(S) , axis = 0)
+        S_other = S_sum - Factor
+        Output = S_diag_margin / ( S_diag_margin + S_other) 
+       
+        return Output
     
-    # Y_hat1 =  margine_softmax(S ,margine) + 0.005
-    # Y_hat2 =  margine_softmax(K.transpose(S) ,margine) + 0.005
-      
-    # ...................................................... method 1
-    P1 = K.softmax(S, axis = 0) #row-wise softmax
-    P2 = K.softmax(S, axis = 1) #column-wise softmax
+    Y_hat1 =  margine_softmax(S ,margine) 
+    Y_hat2 =  margine_softmax(K.transpose(S) ,margine) 
     
-    P1 = P1 + 0.05
-    P2 = P2 + 0.05
-    
-    Y_hat1 = tf.linalg.diag_part (P1)
-    Y_hat2 = tf.linalg.diag_part (P2)
     
     # ......................................................
     
-    I2C_loss = K.sum ( - (K.log(Y_hat1)) , axis = 0)
-    C2I_loss = K.sum ( -  (K.log(Y_hat2)) , axis = 0) 
+    I2C_loss = - K.mean ( K.log(Y_hat1 + 1e-20) , axis = 0)
+    C2I_loss = - K.mean ( K.log(Y_hat2 + 1e-20) , axis = 0) 
     
     loss = I2C_loss + C2I_loss
     

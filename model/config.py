@@ -1,7 +1,7 @@
 
 paths = {  
   "split": "train",
-  "featuredir": "../../data/youcook2/output/",
+  "featuredir": "../../data/youcook2/output/yamnet-based/",
   "outputdir": "../../model/youcook2/"
 }
 
@@ -11,7 +11,7 @@ basic = {
     "visual_model": "resnet152", 
     "layer_name": "avg_pool",
     "audiochannel" : "resDAVEnet",
-    "loss" : "triplet",
+    "loss" : "MMS",
     "save_results" : True,
     "plot_results" : False
 }

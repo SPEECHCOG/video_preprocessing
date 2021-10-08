@@ -68,6 +68,8 @@ recall10_av , recall10_va = model_object()
 
 from keras import backend as K
 import tensorflow as tf
+
+
 out_audio = K.random_normal(shape=( 120, 1536), seed=42)
 out_visual = K.random_normal(shape=( 120, 1536), seed=62)
 out_audio.shape
@@ -79,8 +81,60 @@ I = K.eval(out_visual)
 out_audio = K.expand_dims(out_audio, 0)
 out_visual = K.expand_dims(out_visual, 0)
 target = tf.eye(120)
-S1 = K.squeeze(K.batch_dot(out_audio, out_visual,axes=[-1,-1]), axis = 0)
-S1.shape
+Sinitial = K.squeeze(K.batch_dot(out_audio, out_visual,axes=[-1,-1]), axis = 0)
+print(Sinitial.shape)
+
+margine = 0.001
+# S = Sinitial - K.max(Sinitial, axis = 0)    
+# S_diag =  tf.linalg.diag_part (S) 
+# S_diag_margin = K.exp(S_diag - margine)
+# Factor = K.exp(S_diag)
+# S_sum = K.exp(S)# , axis = 0)
+# S_other = S_sum - Factor
+# Output = S_diag_margin / ( S_diag_margin + S_other) 
+   
+S = Sinitial - K.max(Sinitial, axis = 0)    
+S_diag =  tf.linalg.diag_part (S) 
+S_diag_margin = K.exp(S_diag - margine)
+Factor = K.exp(S_diag)
+S_sum = K.sum(K.exp(S) , axis = 0)
+S_other = S_sum - Factor
+Output = S_diag_margin / ( S_diag_margin + S_other) 
+Y_hat1 = Output
+I2C_loss = - K.mean ( K.log(Y_hat1 + 0.00001) , axis = 0)
+#Y_hat2 =  margine_softmax(K.transpose(S) ,margine) 
+
+s = K.eval(S)
+s_diag =  K.eval(S_diag)
+s_diag_margin = K.eval(S_diag_margin)
+factor = K.eval(Factor)
+s_sum = K.eval(S_sum)
+s_other = K.eval(S_other)
+output = K.eval(Output)
+i2c = K.eval(I2C_loss)
+
+import numpy
+out_audio = numpy.random.randn(120, 1536)
+out_visual = numpy.random.randn( 1536 , 120)
+out_audio.shape
+out_visual.shape
+
+S = numpy.dot(out_audio, out_visual)
+print(S.shape)
+
+margine = 0.001    
+S_diag =  numpy.diag (S) 
+S_diag_margin = numpy.exp(S_diag - margine)
+
+
+S_other = K.sum(K.exp(S) , axis = 0) - K.exp(S_diag)
+Output = S_diag_margin / ( S_diag_margin + S_other) 
+   
+
+Y_hat1 = Output
+I2C_loss = - K.mean ( K.log(Y_hat1) , axis = 0)
+#Y_hat2 =  margine_softmax(K.transpose(S) ,margine) 
+   
 #...................................................... method 0
 margine = - 0.2
 
@@ -122,7 +176,7 @@ test_col = numpy.sum(p1, axis = 1)
 
 # loss = I2C_loss + C2I_loss
 
-
+K.eval(K.epsilon())
 #  # ...................................................... method 1
  
 # S1 = K.squeeze(K.batch_dot(out_audio, out_visual,axes=[-1,-1]), axis = 0)

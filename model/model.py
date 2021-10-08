@@ -4,7 +4,7 @@ import pickle5 as pickle # for myPython env
 import numpy
 
 
-from utils import triplet_loss, normalizeX, mms_loss, prepare_triplet_data, prepare_data, calculate_recallat10
+from utils import triplet_loss, normalizeX, mms_loss,  prepare_data, calculate_recallat10
 
 
 
@@ -197,8 +197,9 @@ class Net():
         
         # poling
         # out_audio_channel  = AveragePooling1D(64,padding='same')(out_4) 
-        # out_audio_channel = Reshape([out_audio_channel.shape[2]],name='reshape_audio')(out_audio_channel) 
+        # out_audio_channel = Reshape([out_audio_channel.shape[2]])(out_audio_channel) 
         
+        out_audio_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_audio')(out_audio_channel)
         
         audio_model = Model(inputs= audio_sequence, outputs = out_audio_channel )
         audio_model.summary()
@@ -214,7 +215,7 @@ class Net():
         dr_visual = Dropout(dropout_size,name = 'dr_visual')(forward_visual)
         bn_visual = BatchNormalization(axis=-1,name = 'bn1_visual')(dr_visual)
         
-        # self attention
+        #self attention
         input_attention = bn_visual
         query = input_attention
         key = input_attention
@@ -230,30 +231,33 @@ class Net():
         
         outAtt = Concatenate(axis=-1)([poolAtt, poolquery])
         outAtt = Reshape([2048],name='reshape_out_attV')(outAtt)
-        # max pooling
-        #pool_visual = MaxPooling1D(10,padding='same')(bn_visual)
-        #out_visual_channel = Reshape([out_visual_channel.shape[2]],name='reshape_visual')(out_visual_channel)
-        
         out_visual_channel = outAtt
-         
+        
+        # max pooling
+        # pool_visual = MaxPooling1D(10,padding='same')(bn_visual)
+        # out_visual_channel = Reshape([pool_visual.shape[2]])(pool_visual)
+        
+        
+        out_visual_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_visual')(out_visual_channel)
+        
         visual_model = Model(inputs= visual_sequence, outputs = out_visual_channel )
         visual_model.summary()
         return visual_sequence , out_visual_channel , visual_model
 
      
-    def build_network_triplet(self, Xshape , Yshape):
+    def build_network(self, Xshape , Yshape):
            
         visual_sequence , out_visual_channel , visual_model = self. build_visual_model (Yshape)
         if self.audiochannel=="resDAVEnet":        
             audio_sequence , out_audio_channel , audio_model = self.build_resDAVEnet (Xshape)            
         elif  self.audiochannel=="simplenet": 
             audio_sequence , out_audio_channel , audio_model = self.build_simple_audio_model (Xshape)
- 
-        # V = Reshape([out_visual_channel.shape[2]],name='reshape_visual')(out_visual_channel)
-        # A = Reshape([out_audio_channel.shape[2]],name='reshape_audio')(out_audio_channel) 
+        
+        
         V = out_visual_channel
         A = out_audio_channel
-        gate_size = 2048
+        
+        gate_size = 1024
         gatedV_1 = Dense(gate_size)(V)
         gatedV_2 = Dense(gate_size,activation = 'sigmoid')(gatedV_1)        
         gatedV = Multiply(name= 'multiplyV')([gatedV_1, gatedV_2])
@@ -261,44 +265,25 @@ class Net():
         gatedA_1 = Dense(gate_size)(A)
         gatedA_2 = Dense(gate_size,activation = 'sigmoid')(gatedA_1)        
         gatedA = Multiply(name= 'multiplyA')([gatedA_1, gatedA_2])
-                
-        
-        mapIA = dot([gatedV,gatedA],axes=-1,normalize = True,name='dot_matchmap')     
-        final_model = Model(inputs=[visual_sequence, audio_sequence], outputs = mapIA )
         
         visual_embedding_model = Model(inputs=visual_sequence, outputs = gatedV, name='visual_embedding_model')
         audio_embedding_model = Model(inputs=audio_sequence, outputs = gatedA, name='audio_embedding_model')
-        final_model.summary()
         
-        final_model.compile(loss=triplet_loss, optimizer= Adam(lr=1e-04))
+        if self.loss == "triplet":
+            
+            mapIA = dot([gatedV,gatedA],axes=-1,normalize = True,name='dot_matchmap')       
+            final_model = Model(inputs=[visual_sequence, audio_sequence], outputs = mapIA )
+            final_model.compile(loss=triplet_loss, optimizer= Adam(lr=1e-04))
+            
+        elif self.loss == "MMS":
+            s_output = Concatenate(axis=1)([Reshape([1 , gatedV.shape[1]])(gatedV) ,  Reshape([1 ,gatedA.shape[1]])(gatedA)])
+            final_model = Model(inputs=[visual_sequence, audio_sequence], outputs = s_output )
+            final_model.compile(loss=mms_loss, optimizer= Adam(lr=1e-03))
+    
+        final_model.summary()
+    
         return visual_embedding_model,audio_embedding_model,final_model
 
-    def build_network_MMS(self, Xshape , Yshape):
-     
-        visual_sequence , out_visual_channel , visual_model = self. build_visual_model (Yshape)
-        if self.audiochannel=="resDAVEnet":        
-            audio_sequence , out_audio_channel , audio_model = self.build_resDAVEnet (Xshape)            
-        elif  self.audiochannel=="simplenet": 
-            audio_sequence , out_audio_channel , audio_model = self.build_simple_audio_model (Xshape)
-        
-        out_audio_channel = Dense(1024,activation='linear',name='dense_audio')(out_audio_channel)
-        out_visual_channel = Dense(1024,activation='linear',name='dense_visual')(out_visual_channel)
-        out_audio_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_audio')(out_audio_channel)
-        out_visual_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_visual')(out_visual_channel)
-        # combining audio and visual channels             
-        A = Reshape([1 , out_visual_channel.shape[1]])(out_audio_channel) 
-        V = Reshape([1 , out_visual_channel.shape[1]])(out_visual_channel) 
-        
-        s_output = Concatenate(axis=1)([V, A])
-        
-        final_model = Model(inputs=[visual_sequence, audio_sequence], outputs = s_output )
-        
-        visual_embedding_model = Model(inputs=visual_sequence, outputs= V, name='visual_embedding_model')
-        audio_embedding_model = Model(inputs=audio_sequence,outputs= A, name='visual_embedding_model')
-        final_model.summary()
-        
-        final_model.compile(loss=mms_loss, optimizer= Adam(lr=1e-03))
-        return visual_embedding_model,audio_embedding_model,final_model
  
        
 
@@ -320,19 +305,16 @@ class Net():
         self.split = "test"
         audio_features_test = self.get_audio_features()            
         visual_features_test = self.get_visual_features()
-        Ytest, Xtest, bin_val = prepare_triplet_data (audio_features_test , visual_features_test)
+        Ytest, Xtest, bin_val = prepare_data (audio_features_test , visual_features_test , self.loss)
         
         Xshape = numpy.shape(audio_features_test)[1:]        
         Yshape = numpy.shape(visual_features_test)[1:] 
-        if self.loss == "triplet":
-            visual_embedding_model,audio_embedding_model,final_model = self.build_network_triplet( Xshape , Yshape)
-        elif self.loss == "MMS":
-            visual_embedding_model,audio_embedding_model,final_model = self.build_network_MMS(Xshape, Yshape)
         
+        visual_embedding_model,audio_embedding_model,final_model = self.build_network( Xshape , Yshape)
         
-        
+     
         for epoch in range(50):
-            Ytrain, Xtrain, bin_train = prepare_triplet_data (audio_features , visual_features)
+            Ytrain, Xtrain, bin_train = prepare_data (audio_features , visual_features , self.loss)
             final_model.fit([Ytrain,Xtrain], bin_train, shuffle=False, epochs=1, batch_size=120) 
             final_model.evaluate([Ytest,Xtest], bin_val, batch_size=120)
             del Ytrain,Xtrain,bin_train
@@ -341,7 +323,9 @@ class Net():
             visual_embeddings = visual_embedding_model.predict(visual_features_test) 
             # audio_embeddings = numpy.squeeze(audio_embeddings)
             # visual_embeddings = numpy.squeeze(visual_embeddings)
-            
+            print('checking embedd shape')
+            print(audio_embeddings.shape)
+            print(visual_embeddings.shape)
             ########### calculating Recall@10                    
             poolsize =  1000
             number_of_trials = 10
