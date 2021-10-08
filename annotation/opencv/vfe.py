@@ -119,8 +119,10 @@ class VisualFeatureExtractor:
             self.folder_name = value['folder_name']
             print ("processing video folder ... " + str(self.folder_name) )
             vf_video =  []
-            for counter_onset, onset in enumerate(accepted_onsets_second):             
-                image_subpath , image_names = self.create_image_list (counter_onset)
+            number_of_clips = len(accepted_onsets_second)
+            for counter_clip in range(number_of_clips):
+                      
+                image_subpath , image_names = self.create_image_list (counter_clip)
                 all_vfs_per_onset = []
                 for name in image_names: 
                     image_fullname = os.path.join(image_subpath , name)

@@ -1,4 +1,5 @@
 import os
+import numpy
 import cv2 as cv
 import pickle
 
@@ -44,20 +45,23 @@ class Analysis:
 
 
         
-    def write_clip_images (self, cap , accepted_onsets_second):
+    def write_clip_images (self, cap , accepted_onsets_second , accepted_offsets_second):
         
         output_path = os.path.join(self.outputdir , self.split ,  str(self.folder_counter) , "images")
         os.mkdir(output_path)      
-        
-        for counter_onset, onset in enumerate(accepted_onsets_second):
+        number_of_clips = len(accepted_onsets_second)
+        for counter_clip in range(number_of_clips):
             
-            self.output_subpath = os.path.join(output_path, str(counter_onset))
+            self.output_subpath = os.path.join(output_path, str(counter_clip))
             os.mkdir(self.output_subpath)
-            for i in range(self.clip_length_seconds):
+            onset = accepted_onsets_second [counter_clip]
+            offset = accepted_offsets_second [counter_clip]
+            all_seconds = numpy.arange(onset,offset)
+            for counter_second, second in enumerate(all_seconds):
 
-                output_name = self.output_subpath  +  "/" + str(i) + ".jpg"
+                output_name = self.output_subpath  +  "/" + str(counter_second) + ".jpg"
                 print(output_name)
-                ms =  (onset + i ) * 1000
+                ms =  second * 1000
                 cap.set(cv.CAP_PROP_POS_MSEC, ms)      
                 ret,frame = cap.read()                   
                 cv.imwrite(output_name, frame)                      
@@ -86,9 +90,10 @@ class Analysis:
             print(self.counter)
             self.video_name = video_name
             accepted_onsets_second = value['onsets']
+            accepted_offsets_second = value['offsets']
             self.folder_counter = value['folder_name']
             cap = self.load_video ()
-            self.write_clip_images(cap, accepted_onsets_second)
+            self.write_clip_images(cap, accepted_onsets_second, accepted_offsets_second)
             # try:           
                 
             # except:
