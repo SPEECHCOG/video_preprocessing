@@ -10,7 +10,7 @@ sess = tf.compat.v1.Session(config=config)
 
 import numpy
 import scipy
-
+kh
 # INPUT
 # The model accepts a 1-D float32 Tensor or NumPy array containing a waveform of arbitrary length, represented as mono 16 kHz samples in the range [-1.0, +1.0]. 
 # Internally, we frame the waveform into sliding windows of length 0.96 seconds and hop 0.48 seconds, and then run the core of the model on a batch of these frames.
@@ -45,7 +45,7 @@ def ensure_sample_rate(original_sample_rate, waveform,
 
 
 # video sample
-wav_file_name = "../data/input/101_2Ihlw5FFrx4.mp4"
+wav_file_name = "../../data/input/101_YSes0R7EksY.mp4"
 #wav_file_name = "../data/input/101_3rtzSsuJ4Ng.mp4.webm"
 wav_original, sample_rate = librosa.load(wav_file_name , mono=True)
 #sf.write("../data/output/101_2Ihlw5FFrx4_sr.wav", wav_data, sample_rate)
@@ -115,6 +115,9 @@ def class_names_from_csv(class_map_csv_text):
 class_map_path = model.class_map_path().numpy()
 class_names = class_names_from_csv(class_map_path)
 
+import pickle
+with open("/worktmp/khorrami/project_5/video/data/youcook2/output/yamnet-based/yamnet_classes", 'wb') as handle:
+    yamnet = pickle.dump(class_names,handle, protocol=pickle.HIGHEST_PROTOCOL)
 #%%############################################################################
 
 """
@@ -138,7 +141,7 @@ spectrogram_np = log_mel_spectrogram.numpy()
 embeddings_np = embeddings.numpy()
 all_max_scores = scores_np.max(axis = 1)
 all_max_class_indexes = scores_np.argmax(axis = 1)
-all_max_class_indexes = [class_names[ind] for ind in all_max_class_indexes]
+all_max_class_names = [class_names[ind] for ind in all_max_class_indexes]
 
 infered_class = class_names[scores_np.mean(axis=0).argmax()]
 print(f'The main sound is: {infered_class}')
