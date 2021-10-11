@@ -4,7 +4,7 @@ import pickle5 as pickle # for myPython env
 import numpy
 
 
-from utils import triplet_loss, normalizeX, mms_loss,  prepare_data, calculate_recallat10
+from utils import triplet_loss,  mms_loss,  prepare_data, preparX, preparY, calculate_recallat10
 
 
 
@@ -21,22 +21,24 @@ from tensorflow.keras.optimizers import Adam
 
 
 class Net():
-    def __init__(self, audiochannel, loss, visual_model, layer_name, featuredir, outputdir, split , feature_settings):
+    def __init__(self, audiochannel, loss, visual_model, layer_name, featuredir_train, featuredir_test, outputdir, split , feature_settings):
         self.audiochannel = audiochannel
         self.loss = loss
         self.visual_model = visual_model
-        self.featuredir = featuredir
+        self.featuredir_train = featuredir_train
+        self.featuredir_test = featuredir_test
         self.outputdir = outputdir
         self.split = split
         
         self.feature_settings = feature_settings     
-        self.clip_length_seconds = self.feature_settings ["clip_length_seconds"]
+        self.zeropadd = self.feature_settings["zeropadd"]
         self.visual_model = visual_model
         self.layer_name = layer_name
          
         self.video_name = ''
         self.folder_name = ''
-        self.feature_path = ''   
+        self.feature_path = '' 
+        self.featuredir = self.featuredir_train
         self.dict_errors = {}
         
     def load_dict_onsets (self):       
@@ -62,10 +64,12 @@ class Net():
         self.dict_errors[self.video_name] = self.folder_name
           
     
-    def get_audio_features (self):             
-        dict_onsets = self.load_dict_onsets ()        
-        af_all = []                
-        for video_name, value in dict_onsets.items():             
+    def get_audio_features (self):
+
+        dict_onsets = self.load_dict_onsets ()  
+        af_all = [] 
+               
+        for video_name, value in dict_onsets.items():           
             self.video_name = video_name
             self.folder_name = value['folder_name']            
             if len(value['onsets']) == 0:
@@ -73,26 +77,54 @@ class Net():
             else:
                 self.feature_path = os.path.join(self.featuredir , self.split ,  str(self.folder_name))      
                 af = self.load_af()            
-                logmel = af['logmel40']            
-                af_all.extend(logmel)
-        
-        
-        #audio_features = numpy.array(af_all)
-        # if normalization of logmels
-        audio_features = normalizeX (af_all, 1000)
+                logmel_all = af['logmel40'] 
+                logmel = logmel_all#[0:10]
+                if self.zeropadd > 0:                  
+                    af_all.append(logmel)
+                else:
+                    af_all.extend(logmel)
+                    
+        if self.zeropadd > 0: 
+            audio_features = []
+            len_of_longest_sequence = 100 * self.zeropadd
+            for af_video in af_all:       
+                logmel_padded = preparX (af_video,len_of_longest_sequence )
+                audio_features.extend(logmel_padded)
+            audio_features = numpy.array(audio_features)
+        else:
+            audio_features = numpy.array(af_all)      
         return audio_features
     
     def get_visual_features (self):
         dict_onsets = self.load_dict_onsets ()
-        vf_all = []       
-        for video_name, value in dict_onsets.items():             
+       
+        vf_all = []
+
+        for video_name, value in dict_onsets.items():   
             self.video_name = video_name
             self.folder_name = value['folder_name']                                  
             self.feature_path = os.path.join(self.featuredir , self.split ,  str(self.folder_name))      
             vf = self.load_vf()
-            resnet = vf['resnet152_avg_pool']  
-            vf_all.extend(resnet) 
-        visual_features = numpy.array(vf_all)
+            resnet_all = vf['resnet152_avg_pool'] # resnet features for each onset (10*2048)
+            resnet = resnet_all #[0:10] 
+            if self.zeropadd > 0:
+                len_of_longest_sequence = self.zeropadd
+                resnet_padded = preparY (resnet , len_of_longest_sequence) # 50*2048
+                vf_all.append(resnet_padded)
+            else:
+                vf_all.extend(resnet) 
+                
+        if self.zeropadd > 0: 
+            visual_features = []
+            len_of_longest_sequence =  self.zeropadd
+            for vf_video in vf_all:       
+                resnet_padded = preparY (vf_video , len_of_longest_sequence) # 50*2048
+                visual_features.extend(resnet_padded)
+            visual_features = numpy.array(visual_features)
+        else:
+            visual_features = numpy.array(vf_all)      
+        
+        
         return visual_features  
 
         
@@ -101,7 +133,7 @@ class Net():
         dropout_size = 0.3
         activation_C='relu'
     
-        audio_sequence = Input(shape=Xshape) #(1000, 40)
+        audio_sequence = Input(shape=Xshape) #(5000, 40)
                      
         forward2 = Conv1D(128,11,padding="same",activation=activation_C,name = 'conv2')(audio_sequence)
         dr2 = Dropout(dropout_size)(forward2)
@@ -131,7 +163,11 @@ class Net():
 
     def build_resDAVEnet (self, Xshape):     
     
-        audio_sequence = Input(shape=Xshape) #Xshape = (1000, 40)
+        audio_sequence = Input(shape=Xshape) #Xshape = (5000, 40)
+        if self.zeropadd >= 0:
+            strd = 4
+        else:
+            strd = 2
         x0 = Conv1D(128,1,strides = 1, padding="same")(audio_sequence)
         x0 = BatchNormalization(axis=-1)(x0)
         x0 = ReLU()(x0) 
@@ -141,8 +177,8 @@ class Net():
         x1 = Conv1D(128,9,strides = 1, padding="same")(in_residual)
         x1 = BatchNormalization(axis=-1)(x1)
         x1 = ReLU()(x1)       
-        x2 = Conv1D(128,9,strides = 2, padding="same")(x1)  
-        x1downsample = Conv1D(128,9,strides = 2, padding="same")(x1)
+        x2 = Conv1D(128,9,strides = strd, padding="same")(x1)  
+        x1downsample = Conv1D(128,9,strides = strd, padding="same")(x1)
         out = Add()([x1downsample,x2])
         out_1 = ReLU()(out) # (500, 128) 
         
@@ -151,8 +187,8 @@ class Net():
         x1 = Conv1D(256,9,strides = 1, padding="same")(in_residual)
         x1 = BatchNormalization(axis=-1)(x1)
         x1 = ReLU()(x1)    
-        x2 = Conv1D(256,9,strides = 2, padding="same")(x1)  
-        x1downsample = Conv1D(256,9,strides = 2, padding="same")(x1)
+        x2 = Conv1D(256,9,strides = strd, padding="same")(x1)  
+        x1downsample = Conv1D(256,9,strides = strd, padding="same")(x1)
         out = Add()([x1downsample,x2])
         out_2 = ReLU()(out) # (256, 256)
         
@@ -161,8 +197,8 @@ class Net():
         x1 = Conv1D(512,9,strides = 1, padding="same")(in_residual)
         x1 = BatchNormalization(axis=-1)(x1)
         x1 = ReLU()(x1)    
-        x2 = Conv1D(512,9,strides = 2, padding="same")(x1)  
-        x1downsample = Conv1D(512,9,strides = 2, padding="same")(x1)
+        x2 = Conv1D(512,9,strides = strd, padding="same")(x1)  
+        x1downsample = Conv1D(512,9,strides = strd, padding="same")(x1)
         out = Add()([x1downsample,x2])
         out_3 = ReLU()(out) # (128, 512)
 
@@ -172,32 +208,33 @@ class Net():
         x1 = Conv1D(1024,9,strides = 1, padding="same")(in_residual)
         x1 = BatchNormalization(axis=-1)(x1)
         x1 = ReLU()(x1)       
-        x2 = Conv1D(1024,9,strides = 2, padding="same")(x1)  
-        x1downsample = Conv1D(1024,9,strides = 2, padding="same")(x1)
+        x2 = Conv1D(1024,9,strides = strd, padding="same")(x1)  
+        x1downsample = Conv1D(1024,9,strides = strd, padding="same")(x1)
         out = Add()([x1downsample,x2])
         out_4 = ReLU()(out)   # (64, 1024)  
         
         # self attention
-        input_attention = out_4
-        query = input_attention
-        key = input_attention
-        value = Permute((2,1))(input_attention)
+        # input_attention = out_4
+        # query = input_attention
+        # key = input_attention
+        # value = Permute((2,1))(input_attention)
         
-        score = dot([query,key], normalize=False, axes=-1,name='scoreA')
-        weight = Softmax(name='weigthA')(score)
-        attention = dot([weight, value], normalize=False, axes=-1,name='attentionA')
+        # score = dot([query,key], normalize=False, axes=-1,name='scoreA')
+        # scaled_score = score/int(query.shape[1])
+        # weight = Softmax(name ='weigthA')(scaled_score)
+        # attention = dot([weight, value], normalize=False, axes=-1,name='attentionA')
         
-        poolAtt = AveragePooling1D(64, padding='same')(attention) # N, 1, 1024
+        # poolAtt = AveragePooling1D(64, padding='same')(attention) # N, 1, 1024
         
-        poolquery = AveragePooling1D(64, padding='same')(query)# N, 1, 1024
+        # poolquery = AveragePooling1D(64, padding='same')(query)# N, 1, 1024
         
-        outAtt = Concatenate(axis=-1)([poolAtt, poolquery])
-        outAtt = Reshape([2048],name='reshape_out_attA')(outAtt)
-        out_audio_channel = outAtt
+        # outAtt = Concatenate(axis=-1)([poolAtt, poolquery])
+        # outAtt = Reshape([2048],name='reshape_out_attA')(outAtt)
+        # out_audio_channel = outAtt
         
         # poling
-        # out_audio_channel  = AveragePooling1D(64,padding='same')(out_4) 
-        # out_audio_channel = Reshape([out_audio_channel.shape[2]])(out_audio_channel) 
+        out_audio_channel  = AveragePooling1D(64,padding='same')(out_4) 
+        out_audio_channel = Reshape([out_audio_channel.shape[2]])(out_audio_channel) 
         
         out_audio_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_audio')(out_audio_channel)
         
@@ -216,26 +253,26 @@ class Net():
         bn_visual = BatchNormalization(axis=-1,name = 'bn1_visual')(dr_visual)
         
         #self attention
-        input_attention = bn_visual
-        query = input_attention
-        key = input_attention
-        value = Permute((2,1))(input_attention)
+        # input_attention = bn_visual
+        # query = input_attention
+        # key = input_attention
+        # value = Permute((2,1))(input_attention)
         
-        score = dot([query,key], normalize=False, axes=-1,name='scoreV')
-        weight = Softmax(name='weigthV')(score)
-        attention = dot([weight, value], normalize=False, axes=-1,name='attentionV')
+        # score = dot([query,key], normalize=False, axes=-1,name='scoreV')
+        # weight = Softmax(name='weigthV')(score)
+        # attention = dot([weight, value], normalize=False, axes=-1,name='attentionV')
         
-        poolAtt = AveragePooling1D(10, padding='same')(attention) # N, 1, 1024
+        # poolAtt = AveragePooling1D(10, padding='same')(attention) # N, 1, 1024
         
-        poolquery = AveragePooling1D(10, padding='same')(query)# N, 1, 1024
+        # poolquery = AveragePooling1D(10, padding='same')(query)# N, 1, 1024
         
-        outAtt = Concatenate(axis=-1)([poolAtt, poolquery])
-        outAtt = Reshape([2048],name='reshape_out_attV')(outAtt)
-        out_visual_channel = outAtt
+        # outAtt = Concatenate(axis=-1)([poolAtt, poolquery])
+        # outAtt = Reshape([2048],name='reshape_out_attV')(outAtt)
+        # out_visual_channel = outAtt
         
-        # max pooling
-        # pool_visual = MaxPooling1D(10,padding='same')(bn_visual)
-        # out_visual_channel = Reshape([pool_visual.shape[2]])(pool_visual)
+        #max pooling
+        pool_visual = MaxPooling1D(50,padding='same')(bn_visual)
+        out_visual_channel = Reshape([pool_visual.shape[2]])(pool_visual)
         
         
         out_visual_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_visual')(out_visual_channel)
@@ -289,35 +326,76 @@ class Net():
 
     def __call__ (self):
         
-        self.split = "train"
-        audio_features_train = self.get_audio_features()            
-        visual_features_train = self.get_visual_features()
+        # with open("/worktmp/khorrami/project_5/video/data/youcook2/features/yamnet/zp50/af_test", 'rb') as handle:
+        #     audio_features_test = pickle.load(handle)
+
+        # with open("/worktmp/khorrami/project_5/video/data/youcook2/features/yamnet/zp50/vf_test", 'rb') as handle:
+        #     visual_features_test = pickle.load(handle)    
+
+        # with open("/worktmp/khorrami/project_5/video/data/youcook2/features/yamnet/zp50/af_train", 'rb') as handle:
+        #     audio_features_train = pickle.load(handle)
+
+        # with open("/worktmp/khorrami/project_5/video/data/youcook2/features/yamnet/zp50/vf_train", 'rb') as handle:
+        #     visual_features_train = pickle.load(handle)    
+
+        # with open("/worktmp/khorrami/project_5/video/data/youcook2/features/yamnet/zp50/af_val", 'rb') as handle:
+        #     audio_features_val = pickle.load(handle)
+
+        # with open("/worktmp/khorrami/project_5/video/data/youcook2/features/yamnet/zp50/vf_val", 'rb') as handle:
+        #     visual_features_val = pickle.load(handle)    
+            
+            
+
+
+        
+        
         
 
-        self.split = "val"
-        audio_features_val = self.get_audio_features()            
-        visual_features_val = self.get_visual_features()
+        # self.split = "val"
+        # audio_features_val = self.get_audio_features()            
+        # visual_features_val = self.get_visual_features()
         
-        audio_features = numpy.concatenate((audio_features_train, audio_features_val), axis = 0)
-        visual_features = numpy.concatenate((visual_features_train, visual_features_val), axis = 0)
-        del audio_features_train,audio_features_val ,visual_features_train, visual_features_val
+        # audio_features = numpy.concatenate((audio_features_train, audio_features_val), axis = 0)
+        # visual_features = numpy.concatenate((visual_features_train, visual_features_val), axis = 0)
+        # del audio_features_train,audio_features_val ,visual_features_train, visual_features_val
+
         
-        self.split = "test"
-        audio_features_test = self.get_audio_features()            
-        visual_features_test = self.get_visual_features()
-        Ytest, Xtest, bin_val = prepare_data (audio_features_test , visual_features_test , self.loss)
-        
-        Xshape = numpy.shape(audio_features_test)[1:]        
-        Yshape = numpy.shape(visual_features_test)[1:] 
-        
-        visual_embedding_model,audio_embedding_model,final_model = self.build_network( Xshape , Yshape)
+        visual_embedding_model,audio_embedding_model,final_model = self.build_network( Xshape = (5000, 40) , Yshape = (50,2048))
         
      
         for epoch in range(50):
-            Ytrain, Xtrain, bin_train = prepare_data (audio_features , visual_features , self.loss)
-            final_model.fit([Ytrain,Xtrain], bin_train, shuffle=False, epochs=1, batch_size=120) 
-            final_model.evaluate([Ytest,Xtest], bin_val, batch_size=120)
+            self.split = "train"
+            self.featuredir = self.featuredir_train
+            audio_features_train = self.get_audio_features()            
+            visual_features_train = self.get_visual_features()
+            Ytrain, Xtrain, bin_train = prepare_data (audio_features_train , visual_features_train , self.loss)
+            del audio_features_train, visual_features_train
+            print("..............training.......................")
+            final_model.fit([Ytrain,Xtrain], bin_train, shuffle=False, epochs=5, batch_size=120) 
             del Ytrain,Xtrain,bin_train
+            
+            
+            # self.split = "val"
+            # self.featuredir = self.featuredir_train
+            # audio_features_train = self.get_audio_features()            
+            # visual_features_train = self.get_visual_features()
+            # Ytrain, Xtrain, bin_train = prepare_data (audio_features_train , visual_features_train , self.loss)
+            # del audio_features_train, visual_features_train
+            # final_model.fit([Ytrain,Xtrain], bin_train, shuffle=False, epochs=1, batch_size=120) 
+            # del Ytrain,Xtrain,bin_train
+            
+            
+            self.split = "test"
+            self.featuredir = self.featuredir_test
+            audio_features_test = self.get_audio_features()            
+            visual_features_test = self.get_visual_features()
+        
+            Ytest, Xtest, bin_val = prepare_data (audio_features_test , visual_features_test , self.loss)       
+            # Xshape = numpy.shape(audio_features_test)[1:]        
+            # Yshape = numpy.shape(visual_features_test)[1:] 
+            
+            final_model.evaluate([Ytest,Xtest], bin_val, batch_size=120)
+            del Ytest, Xtest
 
             audio_embeddings = audio_embedding_model.predict(audio_features_test)    
             visual_embeddings = visual_embedding_model.predict(visual_features_test) 

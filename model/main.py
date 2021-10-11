@@ -1,4 +1,5 @@
 from model import Net
+#from features import Features
 ###############################################################################
 
 # import tensorflow as tf
@@ -19,7 +20,8 @@ from model import Net
 import config as cfg
 
 split = cfg.paths['split']
-featuredir = cfg.paths['featuredir']
+featuredir_train = cfg.paths['featuredir_train']
+featuredir_test = cfg.paths['featuredir_test']
 outputdir = cfg.paths['outputdir']
 
 audiochannel = cfg.basic['audiochannel']
@@ -29,28 +31,26 @@ visual_model = cfg.basic['visual_model']
 layer_name = cfg.basic['layer_name']
 
 feature_settings = cfg.feature_settings
-# file = '/tuni/groups/3101050_Specog/corpora/youcook2_dataset/clip_annotations/youcook2/train/101_2Ihlw5FFrx4_clip0_step0.pickle'
-# import pickle
-# with open(file, 'rb') as handle:
-#     af = pickle.load(handle)
-
-
-# import pickle
-# with open("/worktmp/khorrami/project_5/video/data/youcook2/output/test/1/vf_resnet152", 'rb') as handle:
-#     vf = pickle.load(handle)   
-    
-    
-# logmel = af['logmel40']  
-# resnet = vf['resnet152_avg_pool']  
-# # run_analysis.split
-# import pickle
-# with open("/worktmp/khorrami/project_5/video/data/youcook2/output/test/1/vf_resnet152", 'rb') as handle:
-#     c = pickle.load(handle)
 
 ###############################################################################
 
-model_object = Net(audiochannel , loss, visual_model, layer_name, featuredir, outputdir, split , feature_settings)
+model_object = Net(audiochannel , loss, visual_model, layer_name, featuredir_train, featuredir_test, outputdir, split , feature_settings)
 
+#feature_object = Features(audiochannel, visual_model, layer_name, featuredir_train, featuredir_test, outputdir, split , feature_settings)
+# model_object.split = 'test'
+# audio_features = model_object.get_audio_features()
+# # kh
+# visual_features = model_object.get_visual_features()
+# # kh
+
+
+# import pickle5 as pickle
+# with open("/worktmp/khorrami/project_5/video/data/youcook2/features/yamnet/zp50/vf_train", 'wb') as handle:
+#     pickle.dump(visual_features , handle,protocol=pickle.HIGHEST_PROTOCOL)
+    
+# with open("/worktmp/khorrami/project_5/video/data/youcook2/features/yamnet/zp50/vf_train", 'rb') as handle:
+#     test = pickle.load(handle)
+ 
 recall10_av , recall10_va = model_object()
 
 

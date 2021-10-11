@@ -1,7 +1,8 @@
 
 paths = {  
   "split": "train",
-  "featuredir": "../../data/youcook2/output/yamnet-based/",
+  "featuredir_train": "../../data/youcook2/output/yamnet-based/",
+  "featuredir_test": "../../data/youcook2/output/ann-based/",
   "outputdir": "../../model/youcook2/"
 }
 
@@ -18,5 +19,5 @@ basic = {
 
 feature_settings = {
   "audio_sample_rate": 16000,
-  "clip_length_seconds" : 10,
+  "zeropadd": 50
 }

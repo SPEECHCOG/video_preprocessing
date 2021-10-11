@@ -55,15 +55,26 @@ def make_bin_target (n_sample):
     return target
 
 
-def normalizeX (dict_logmel, len_of_longest_sequence):
-    number_of_audios = numpy.shape(dict_logmel)[0]
-    number_of_audio_features = numpy.shape(dict_logmel[0])[1]
+
+def preparX (logmel, len_of_longest_sequence):
+    number_of_audios = numpy.shape(logmel)[0]
+    number_of_audio_features = numpy.shape(logmel[0])[1]
     X = numpy.zeros((number_of_audios ,len_of_longest_sequence, number_of_audio_features),dtype ='float32')
     for k in numpy.arange(number_of_audios):
-       logmel_item = dict_logmel[k]
+       logmel_item = logmel[k]
        logmel_item = logmel_item[0:len_of_longest_sequence]
        X[k,len_of_longest_sequence-len(logmel_item):, :] = logmel_item
     return X
+
+
+def preparY (resnet, len_of_longest_sequence):
+    number_of_clips = len(resnet)
+    Y = numpy.zeros((number_of_clips ,len_of_longest_sequence, 2048),dtype ='float32')
+    for k, array_clip in enumerate(resnet):
+        #number_of_frames = len(array_clip)
+        array_clip_trimmed = array_clip[0:len_of_longest_sequence, :]
+        Y[k,len_of_longest_sequence- len(array_clip_trimmed):, :] = array_clip_trimmed   
+    return Y
 
 def prepare_triplet_data (audio_features , visual_features):
     n_samples = len(visual_features)
