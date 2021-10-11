@@ -38,7 +38,7 @@ visual_feature_extractor()
 
 
 # import pickle
-# with open("/worktmp/khorrami/project_5/video/data/youcook2/output/ann-based/test_onsets", 'rb') as handle:
+# with open("/worktmp/khorrami/project_5/video/data/youcook2/output/ann-based/test/16/vf_resnet152", 'rb') as handle:
 #     b = pickle.load(handle)
     
 # # run_analysis.split
