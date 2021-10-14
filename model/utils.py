@@ -10,20 +10,6 @@ import scipy.spatial as ss
 from keras import backend as K
 
 
-def triplet_loss(y_true,y_pred):    
-    margin = 0.1
-    penalty_factor = 1
-    # penalty factor might speed up training or improve its quality 
-    # since it asks the system to penalize the more unsimilar pairs more than less unsimilar ones
-    # thus it adds the rule to the training procedure that e.g. image woman to speech "person" gets less penalty than to speech "dog"
-    # margin and penalty factors can be changed during training
-    # i.e margin can start from small values (0.1) and be increased gradually during training
-    # penalty factor can start from 1 and be increased during training
-    
-    Sp = y_pred[0::3]
-    Si = y_pred[1::3]
-    Sc = y_pred[2::3]      
-    return K.sum(penalty_factor * K.maximum(0.0,(Sc-Sp + margin )) + penalty_factor * K.maximum(0.0,(Si-Sp + margin )),  axis=0) 
 
 def randOrderTriplet(n_t):
     random_order = numpy.random.permutation(int(n_t))
@@ -123,6 +109,22 @@ def calculate_recallat10( embedding_1,embedding_2, sampling_times, number_of_all
     return recall_all
     
 
+def triplet_loss(y_true,y_pred):    
+    margin = 0.1
+    penalty_factor = 1
+    # penalty factor might speed up training or improve its quality 
+    # since it asks the system to penalize the more unsimilar pairs more than less unsimilar ones
+    # thus it adds the rule to the training procedure that e.g. image woman to speech "person" gets less penalty than to speech "dog"
+    # margin and penalty factors can be changed during training
+    # i.e margin can start from small values (0.1) and be increased gradually during training
+    # penalty factor can start from 1 and be increased during training
+    
+    Sp = y_pred[0::3]
+    Si = y_pred[1::3]
+    Sc = y_pred[2::3]      
+    return K.sum(penalty_factor * K.maximum(0.0,(Sc-Sp + margin )) + penalty_factor * K.maximum(0.0,(Si-Sp + margin )),  axis=0) 
+
+
 def mms_loss(y_true , y_pred): 
     
     
@@ -142,8 +144,6 @@ def mms_loss(y_true , y_pred):
     out_audio = y_pred [:,1,:]
     out_visual = K.expand_dims(out_visual, 0)
     out_audio = K.expand_dims(out_audio, 0)
-
-
 
     S = K.squeeze( K.batch_dot(out_audio, out_visual, axes=[-1,-1]) , axis = 0)
        

@@ -2,9 +2,10 @@ import os
 #import pickle  # for video env
 import pickle5 as pickle # for myPython env
 import numpy
+from scipy.io import savemat
+from matplotlib import pyplot as plt
 
-
-from utils import triplet_loss,  mms_loss,  prepare_data, preparX, preparY, calculate_recallat10
+from utils import triplet_loss,  mms_loss,  prepare_data, preparX, preparY, calculate_recallat10 
 
 
 
@@ -14,7 +15,7 @@ from tensorflow.keras.layers import Lambda
 
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import  Input, Reshape, Dense, Dropout, BatchNormalization, dot, Softmax, Permute
-from tensorflow.keras.layers import  MaxPooling1D,AveragePooling1D,  Conv1D, Concatenate, ReLU, Add, Multiply
+from tensorflow.keras.layers import  MaxPooling1D,AveragePooling1D,  Conv1D, Concatenate, ReLU, Add, Multiply, GRU
 from tensorflow.keras.optimizers import Adam
 
 
@@ -40,6 +41,8 @@ class Net():
         self.feature_path = '' 
         self.featuredir = self.featuredir_train
         self.dict_errors = {}
+        self.av_all = []
+        self.va_all = []
         
     def load_dict_onsets (self):       
         input_name =  self.featuredir + self.split + '_onsets'  
@@ -79,12 +82,12 @@ class Net():
                 af = self.load_af()            
                 logmel_all = af['logmel40'] 
                 logmel = logmel_all#[0:10]
-                if self.zeropadd > 0:                  
+                if self.split =='test':                  
                     af_all.append(logmel)
                 else:
                     af_all.extend(logmel)
                     
-        if self.zeropadd > 0: 
+        if self.split =='test': 
             audio_features = []
             len_of_longest_sequence = 100 * self.zeropadd
             for af_video in af_all:       
@@ -107,14 +110,14 @@ class Net():
             vf = self.load_vf()
             resnet_all = vf['resnet152_avg_pool'] # resnet features for each onset (10*2048)
             resnet = resnet_all #[0:10] 
-            if self.zeropadd > 0:
+            if self.split =='test':
                 len_of_longest_sequence = self.zeropadd
                 resnet_padded = preparY (resnet , len_of_longest_sequence) # 50*2048
                 vf_all.append(resnet_padded)
             else:
                 vf_all.extend(resnet) 
                 
-        if self.zeropadd > 0: 
+        if self.split =='test': 
             visual_features = []
             len_of_longest_sequence =  self.zeropadd
             for vf_video in vf_all:       
@@ -127,13 +130,44 @@ class Net():
         
         return visual_features  
 
+    def build_apc (self, Xshape):
+        audio_sequence = Input(shape=Xshape) #Xshape = (1000, 40)
+        prenet = Dense(128)(audio_sequence) # (1000, 128)
+        context = GRU(32, return_sequences=True)(prenet) # (1000, 32)
+        postnet = Conv1D (40, kernel_size=1, padding='same')(context) # (1000, 40)
+        predictor = Model(audio_sequence, postnet)
+        predictor.compile(optimizer=Adam(lr=1e-04), loss='mean_absolute_error')
+        apc = Model(audio_sequence, context)
+        #predictor.fit(x_train, y_train)
+        return predictor, apc
+    
+    def train_apc (self,x_train ):
+        self.split = "train"
+        self.featuredir = self.featuredir_test
+        audio_features_test = self.get_audio_features()
+        x_train =  audio_features_test
         
         
-    def build_simple_audio_model (self, Xshape):     
+        predictor, apc = self.build_apc(Xshape= (1000, 40))
+        predictor.fit(x_train, x_train , epochs=10, batch_size=120)
+        
+        
+        # self.split = "test"
+        # self.featuredir = self.featuredir_test
+        # audio_features_test = self.get_audio_features()
+        # x_test =  audio_features_test       
+        # predictor.evaluate(x_test, x_test, batch_size=120)
+        
+        apc_features = apc.predict(x_train)
+        
+        return apc_features
+        
+        
+    def build_simple_audio_model (self,Xshape ):     
         dropout_size = 0.3
         activation_C='relu'
     
-        audio_sequence = Input(shape=Xshape) #(5000, 40)
+        audio_sequence = Input(shape=Xshape) #(2500, 40)
                      
         forward2 = Conv1D(128,11,padding="same",activation=activation_C,name = 'conv2')(audio_sequence)
         dr2 = Dropout(dropout_size)(forward2)
@@ -163,11 +197,10 @@ class Net():
 
     def build_resDAVEnet (self, Xshape):     
     
-        audio_sequence = Input(shape=Xshape) #Xshape = (5000, 40)
-        if self.zeropadd >= 0:
-            strd = 4
-        else:
-            strd = 2
+        audio_sequence = Input(shape=Xshape) #Xshape = (2500, 40)
+        
+        strd = 2
+        
         x0 = Conv1D(128,1,strides = 1, padding="same")(audio_sequence)
         x0 = BatchNormalization(axis=-1)(x0)
         x0 = ReLU()(x0) 
@@ -213,7 +246,7 @@ class Net():
         out = Add()([x1downsample,x2])
         out_4 = ReLU()(out)   # (64, 1024)  
         
-        # self attention
+        #self attention
         # input_attention = out_4
         # query = input_attention
         # key = input_attention
@@ -245,21 +278,22 @@ class Net():
     def build_visual_model (self, Yshape):
         
         dropout_size = 0.3
-        visual_sequence = Input(shape=Yshape) #Yshape = (10,2048)
+        visual_sequence = Input(shape=Yshape) #Yshape = (25,2048)
         
         #resh0 = Reshape([1, visual_sequence.shape[1],visual_sequence.shape[2]],name='reshape_visual')(visual_sequence) 
         forward_visual = Conv1D(1024,3,strides=1,padding = "same", activation='relu', name = 'conv_visual')(visual_sequence)
         dr_visual = Dropout(dropout_size,name = 'dr_visual')(forward_visual)
         bn_visual = BatchNormalization(axis=-1,name = 'bn1_visual')(dr_visual)
         
-        #self attention
+        ##self attention
         # input_attention = bn_visual
         # query = input_attention
         # key = input_attention
         # value = Permute((2,1))(input_attention)
         
         # score = dot([query,key], normalize=False, axes=-1,name='scoreV')
-        # weight = Softmax(name='weigthV')(score)
+        # scaled_score = score/int(query.shape[1])
+        # weight = Softmax(name='weigthV')(scaled_score)
         # attention = dot([weight, value], normalize=False, axes=-1,name='attentionV')
         
         # poolAtt = AveragePooling1D(10, padding='same')(attention) # N, 1, 1024
@@ -271,7 +305,7 @@ class Net():
         # out_visual_channel = outAtt
         
         #max pooling
-        pool_visual = MaxPooling1D(50,padding='same')(bn_visual)
+        pool_visual = MaxPooling1D(10,padding='same')(bn_visual)
         out_visual_channel = Reshape([pool_visual.shape[2]])(pool_visual)
         
         
@@ -294,7 +328,7 @@ class Net():
         V = out_visual_channel
         A = out_audio_channel
         
-        gate_size = 1024
+        gate_size = 2048
         gatedV_1 = Dense(gate_size)(V)
         gatedV_2 = Dense(gate_size,activation = 'sigmoid')(gatedV_1)        
         gatedV = Multiply(name= 'multiplyV')([gatedV_1, gatedV_2])
@@ -325,77 +359,42 @@ class Net():
        
 
     def __call__ (self):
+
+        self.split = "test"
+        self.featuredir = self.featuredir_test
+        audio_features_test = self.get_audio_features()            
+        visual_features_test = self.get_visual_features()
+        Ytest, Xtest, bin_val = prepare_data (audio_features_test , visual_features_test , self.loss)       
+        Xshape = numpy.shape(audio_features_test)[1:]        
+        Yshape = numpy.shape(visual_features_test)[1:] 
         
-        # with open("/worktmp/khorrami/project_5/video/data/youcook2/features/yamnet/zp50/af_test", 'rb') as handle:
-        #     audio_features_test = pickle.load(handle)
-
-        # with open("/worktmp/khorrami/project_5/video/data/youcook2/features/yamnet/zp50/vf_test", 'rb') as handle:
-        #     visual_features_test = pickle.load(handle)    
-
-        # with open("/worktmp/khorrami/project_5/video/data/youcook2/features/yamnet/zp50/af_train", 'rb') as handle:
-        #     audio_features_train = pickle.load(handle)
-
-        # with open("/worktmp/khorrami/project_5/video/data/youcook2/features/yamnet/zp50/vf_train", 'rb') as handle:
-        #     visual_features_train = pickle.load(handle)    
-
-        # with open("/worktmp/khorrami/project_5/video/data/youcook2/features/yamnet/zp50/af_val", 'rb') as handle:
-        #     audio_features_val = pickle.load(handle)
-
-        # with open("/worktmp/khorrami/project_5/video/data/youcook2/features/yamnet/zp50/vf_val", 'rb') as handle:
-        #     visual_features_val = pickle.load(handle)    
-            
-            
-
-
+        visual_embedding_model,audio_embedding_model,final_model = self.build_network( Xshape , Yshape )
         
+        final_model.evaluate([Ytest,Xtest], bin_val, batch_size=120)
+    
         
-        
-
-        # self.split = "val"
-        # audio_features_val = self.get_audio_features()            
-        # visual_features_val = self.get_visual_features()
-        
-        # audio_features = numpy.concatenate((audio_features_train, audio_features_val), axis = 0)
-        # visual_features = numpy.concatenate((visual_features_train, visual_features_val), axis = 0)
-        # del audio_features_train,audio_features_val ,visual_features_train, visual_features_val
-
-        
-        visual_embedding_model,audio_embedding_model,final_model = self.build_network( Xshape = (5000, 40) , Yshape = (50,2048))
-        
-     
+  
         for epoch in range(50):
+            
             self.split = "train"
             self.featuredir = self.featuredir_train
             audio_features_train = self.get_audio_features()            
             visual_features_train = self.get_visual_features()
-            Ytrain, Xtrain, bin_train = prepare_data (audio_features_train , visual_features_train , self.loss)
+            Y,X,b = prepare_data (audio_features_train , visual_features_train  , self.loss) 
             del audio_features_train, visual_features_train
-            print("..............training.......................")
-            final_model.fit([Ytrain,Xtrain], bin_train, shuffle=False, epochs=5, batch_size=120) 
-            del Ytrain,Xtrain,bin_train
+            final_model.fit([Y,X], b, shuffle=False, epochs=1, batch_size=120)
+            del Y,X,b
             
-            
-            # self.split = "val"
-            # self.featuredir = self.featuredir_train
-            # audio_features_train = self.get_audio_features()            
-            # visual_features_train = self.get_visual_features()
-            # Ytrain, Xtrain, bin_train = prepare_data (audio_features_train , visual_features_train , self.loss)
-            # del audio_features_train, visual_features_train
-            # final_model.fit([Ytrain,Xtrain], bin_train, shuffle=False, epochs=1, batch_size=120) 
-            # del Ytrain,Xtrain,bin_train
-            
-            
-            self.split = "test"
-            self.featuredir = self.featuredir_test
-            audio_features_test = self.get_audio_features()            
-            visual_features_test = self.get_visual_features()
-        
-            Ytest, Xtest, bin_val = prepare_data (audio_features_test , visual_features_test , self.loss)       
-            # Xshape = numpy.shape(audio_features_test)[1:]        
-            # Yshape = numpy.shape(visual_features_test)[1:] 
+            self.split = "val"
+            self.featuredir = self.featuredir_train
+            audio_features_train = self.get_audio_features()            
+            visual_features_train = self.get_visual_features()
+            Y, X, b = prepare_data (audio_features_train , visual_features_train , self.loss)
+            del audio_features_train, visual_features_train
+            final_model.fit([Y,X], b, shuffle=False, epochs=1, batch_size=120) 
+            del Y,X,b
             
             final_model.evaluate([Ytest,Xtest], bin_val, batch_size=120)
-            del Ytest, Xtest
 
             audio_embeddings = audio_embedding_model.predict(audio_features_test)    
             visual_embeddings = visual_embedding_model.predict(visual_features_test) 
@@ -404,6 +403,7 @@ class Net():
             print('checking embedd shape')
             print(audio_embeddings.shape)
             print(visual_embeddings.shape)
+            
             ########### calculating Recall@10                    
             poolsize =  1000
             number_of_trials = 10
@@ -417,5 +417,17 @@ class Net():
             print(epoch)
             print(recall10_av)
             print(recall10_va)
-        return recall10_av , recall10_va            
+            
+            ########### saving the results     
+            savepath = '/worktmp/khorrami/project_5/video/model/youcook2/test/'
+            self.av_all.append(recall10_av)
+            self.va_all.append(recall10_va)
+            savemat(os.path.join(savepath,'recalls.mat'), {"av_all":self.av_all,"va_all":self.va_all})
+            
+            plt.plot(self.av_all)
+            plt.plot(self.va_all)
+            plt.grid()
+            plt.savefig(os.path.join(savepath,'recalls.pdf'))
+            
+        return self.av_all , self.va_all            
             
