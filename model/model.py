@@ -22,14 +22,16 @@ from tensorflow.keras.optimizers import Adam
 
 
 class Net():
-    def __init__(self, audiochannel, loss, visual_model, layer_name, featuredir_train, featuredir_test, outputdir, split , feature_settings):
+    def __init__(self, audiochannel, loss, visual_model, layer_name, featuredir,train_feature_type ,test_feature_type, outputdir, split , feature_settings):
         self.audiochannel = audiochannel
         self.loss = loss
         self.visual_model = visual_model
-        self.featuredir_train = featuredir_train
-        self.featuredir_test = featuredir_test
+        self.featuredir = featuredir
+        self.train_feature_type = train_feature_type
+        self.test_feature_type = test_feature_type
         self.outputdir = outputdir
         self.split = split
+
         
         self.feature_settings = feature_settings     
         self.zeropadd = self.feature_settings["zeropadd"]
@@ -39,13 +41,14 @@ class Net():
         self.video_name = ''
         self.folder_name = ''
         self.feature_path = '' 
-        self.featuredir = self.featuredir_train
+        
         self.dict_errors = {}
         self.av_all = []
         self.va_all = []
         
-    def load_dict_onsets (self):       
-        input_name =  self.featuredir + self.split + '_onsets'  
+    def load_dict_onsets (self): 
+        input_path = os.path.join(self.featuredir , self.featuretype , self.split)
+        input_name =  input_path + '_onsets'  
         with open(input_name, 'rb') as handle:
             dict_onsets = pickle.load(handle)
         return dict_onsets        
@@ -78,23 +81,23 @@ class Net():
             if len(value['onsets']) == 0:
                 self.update_error_list()
             else:
-                self.feature_path = os.path.join(self.featuredir , self.split ,  str(self.folder_name))      
+                self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name))      
                 af = self.load_af()            
                 logmel_all = af['logmel40'] 
                 logmel = logmel_all#[0:10]
-                if self.split =='test':                  
+                if self.featuretype == "ann-based":                  
                     af_all.append(logmel)
-                else:
+                elif self.featuretype == "yamnet-based":
                     af_all.extend(logmel)
                     
-        if self.split =='test': 
+        if self.featuretype == "ann-based": 
             audio_features = []
             len_of_longest_sequence = 100 * self.zeropadd
             for af_video in af_all:       
                 logmel_padded = preparX (af_video,len_of_longest_sequence )
                 audio_features.extend(logmel_padded)
             audio_features = numpy.array(audio_features)
-        else:
+        elif self.featuretype == "yamnet-based":
             audio_features = numpy.array(af_all)      
         return audio_features
     
@@ -106,25 +109,25 @@ class Net():
         for video_name, value in dict_onsets.items():   
             self.video_name = video_name
             self.folder_name = value['folder_name']                                  
-            self.feature_path = os.path.join(self.featuredir , self.split ,  str(self.folder_name))      
+            self.feature_path = os.path.join(self.featuredir, self.featuretype , self.split ,  str(self.folder_name))      
             vf = self.load_vf()
             resnet_all = vf['resnet152_avg_pool'] # resnet features for each onset (10*2048)
             resnet = resnet_all #[0:10] 
-            if self.split =='test':
+            if self.featuretype == "ann-based":
                 len_of_longest_sequence = self.zeropadd
                 resnet_padded = preparY (resnet , len_of_longest_sequence) # 50*2048
                 vf_all.append(resnet_padded)
-            else:
+            elif self.featuretype == "yamnet-based":
                 vf_all.extend(resnet) 
                 
-        if self.split =='test': 
+        if self.featuretype == "ann-based": 
             visual_features = []
             len_of_longest_sequence =  self.zeropadd
             for vf_video in vf_all:       
                 resnet_padded = preparY (vf_video , len_of_longest_sequence) # 50*2048
                 visual_features.extend(resnet_padded)
             visual_features = numpy.array(visual_features)
-        else:
+        elif self.featuretype == "yamnet-based":
             visual_features = numpy.array(vf_all)      
         
         
@@ -143,7 +146,6 @@ class Net():
     
     def train_apc (self,x_train ):
         self.split = "train"
-        self.featuredir = self.featuredir_test
         audio_features_test = self.get_audio_features()
         x_train =  audio_features_test
         
@@ -361,7 +363,10 @@ class Net():
     def __call__ (self):
 
         self.split = "test"
-        self.featuredir = self.featuredir_test
+        self.featuretype = self.test_feature_type
+        print('.........................................in testing feature type is')
+        print(self.featuretype)
+        
         audio_features_test = self.get_audio_features()            
         visual_features_test = self.get_visual_features()
         Ytest, Xtest, bin_val = prepare_data (audio_features_test , visual_features_test , self.loss)       
@@ -377,7 +382,10 @@ class Net():
         for epoch in range(50):
             
             self.split = "train"
-            self.featuredir = self.featuredir_train
+            self.featuretype = self.train_feature_type
+            print('...................in training feature type is')
+            print(self.featuretype)
+            
             audio_features_train = self.get_audio_features()            
             visual_features_train = self.get_visual_features()
             Y,X,b = prepare_data (audio_features_train , visual_features_train  , self.loss) 
@@ -385,14 +393,14 @@ class Net():
             final_model.fit([Y,X], b, shuffle=False, epochs=1, batch_size=120)
             del Y,X,b
             
-            self.split = "val"
-            self.featuredir = self.featuredir_train
-            audio_features_train = self.get_audio_features()            
-            visual_features_train = self.get_visual_features()
-            Y, X, b = prepare_data (audio_features_train , visual_features_train , self.loss)
-            del audio_features_train, visual_features_train
-            final_model.fit([Y,X], b, shuffle=False, epochs=1, batch_size=120) 
-            del Y,X,b
+            # self.split = "val"
+            # self.featuredir = self.featuredir_train
+            # audio_features_train = self.get_audio_features()            
+            # visual_features_train = self.get_visual_features()
+            # Y, X, b = prepare_data (audio_features_train , visual_features_train , self.loss)
+            # del audio_features_train, visual_features_train
+            # final_model.fit([Y,X], b, shuffle=False, epochs=1, batch_size=120) 
+            # del Y,X,b
             
             final_model.evaluate([Ytest,Xtest], bin_val, batch_size=120)
 

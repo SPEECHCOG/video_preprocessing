@@ -20,8 +20,9 @@ from model import Net
 import config as cfg
 
 split = cfg.paths['split']
-featuredir_train = cfg.paths['featuredir_train']
-featuredir_test = cfg.paths['featuredir_test']
+featuredir = cfg.paths['featuredir']
+train_feature_type = cfg.paths['train_feature_type']
+test_feature_type = cfg.paths['test_feature_type']
 outputdir = cfg.paths['outputdir']
 
 audiochannel = cfg.basic['audiochannel']
@@ -34,10 +35,11 @@ feature_settings = cfg.feature_settings
 
 ###############################################################################
 
-model_object = Net(audiochannel , loss, visual_model, layer_name, featuredir_train, featuredir_test, outputdir, split , feature_settings)
-#recall10_av , recall10_va = model_object()
+model_object = Net(audiochannel , loss, visual_model, layer_name, featuredir,train_feature_type ,test_feature_type, outputdir, split , feature_settings)
+recall10_av , recall10_va = model_object()
 
-x = model_object.train_apc()
+kh
+x = model_object.get_audio_features()
 
 #feature_object = Features(audiochannel, visual_model, layer_name, featuredir_train, featuredir_test, outputdir, split , feature_settings)
 # model_object.split = 'train'
@@ -51,11 +53,12 @@ x = model_object.train_apc()
 # text2 = json.load(file2)
 
 # import pickle5 as pickle
-# with open("/worktmp/khorrami/project_5/video/data/youcook2/features/yamnet/zp50/vf_train", 'wb') as handle:
+# with open("", 'wb') as handle:
 #     pickle.dump(visual_features , handle,protocol=pickle.HIGHEST_PROTOCOL)
-    
-# with open("/worktmp/khorrami/project_5/video/data/youcook2/features/yamnet/zp50/vf_train", 'rb') as handle:
-#     test = pickle.load(handle)
+
+import pickle5 as pickle   
+with open("/worktmp/khorrami/project_5/video/data/youcook2/output/yamnet-based/exp2/test_onsets", 'rb') as handle:
+    test = pickle.load(handle)
  
 ################################################################## testing MMS
 # from keras import backend as K
