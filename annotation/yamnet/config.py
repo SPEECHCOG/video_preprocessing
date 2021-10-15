@@ -1,11 +1,11 @@
 
 
 paths = {  
-  "split": "train",
+  "split": "val",
   "datadir": "/tuni/groups/3101050_Specog/corpora/youcook2_dataset",
-  "outputdir": "../../data/youcook2/output/ann-based/",
-  "annpath-test": "../../data/youcook2/annotations/youcookii_annotations_test_segments_only.json",
-  "annpath-trainval": "../../data/youcook2/annotations/youcookii_annotations_trainval.json"
+  "outputdir": "../../../data/youcook2/output/ann-based/",
+  "annpath-test": "../../../data/youcook2/annotations/youcookii_annotations_test_segments_only.json",
+  "annpath-trainval": "../../../data/youcook2/annotations/youcookii_annotations_trainval.json"
 }
 
 basic = {
