@@ -4,6 +4,8 @@ import numpy
 from random import shuffle
 import math
 import pickle
+import copy
+
 
 import utils
 
@@ -24,6 +26,7 @@ class Analysis:
         self.clip_length_seconds = self.yamnet_settings ["clip_length_seconds"]
         self.win_hope_yamnet = self.yamnet_settings ["win_hope_yamnet"] 
         self.win_hope_logmel = self.yamnet_settings ["win_hope_logmel"]
+        
         
         self.clip_length_yamnet = int (round(self.clip_length_seconds / self.win_hope_yamnet ))
         self.clip_length_logmel = int (round(self.clip_length_seconds / self.win_hope_logmel))
@@ -94,7 +97,7 @@ class Analysis:
     def initialize_global_params (self):
         pass
         
-    def produce_onset_candidates (self, speech_segments):
+    def produce_onset_candidates_exp1 (self, speech_segments):
               
         clip_length_seconds = self.clip_length_seconds       
         accepted_rate = self.yamnet_settings ["acceptance_snr"]
@@ -103,18 +106,19 @@ class Analysis:
         # and, for clip of 10 seconds: 21* 0.8 = 17
         # also, skip first 10 seconds of the audio which is 21 yamnet frames
         # sample every 3 seconds (which is ~ 3* 2 yamnet frames)              
-        clip_length_yamnet = self.clip_length_yamnet        
-        accepted_plus = int(round(clip_length_yamnet * accepted_rate)) 
+        clip_length_yamnet = self.clip_length_yamnet  # e.g. 21 for 10 second      
+        accepted_plus = int(round(clip_length_yamnet * accepted_rate)) # e.g. 17
         number_of_clips = int( self.video_duration / clip_length_seconds) 
         
-        start_frame = clip_length_yamnet 
+        start_frame = clip_length_yamnet # skip first 10 seconds
         end_frame = len(speech_segments) - clip_length_yamnet
         skip_frames_yamnet = int(round(skip_seconds/ self.win_hope_yamnet))
         initial_sequence = [ onset for onset in range(start_frame , end_frame , skip_frames_yamnet) ]  
         
         trial_index = len(initial_sequence) -1 
         onsets_yamnet = []
-        upated_sequence = initial_sequence [:]
+        
+        upated_sequence = copy.copy(initial_sequence) 
         shuffle(upated_sequence)    
         # scan from end to start not to loose any member due to updated list
         while( trial_index >=  0):
@@ -138,7 +142,59 @@ class Analysis:
         onsets_second = [math.floor(item * self.win_hope_yamnet) for item in onsets_yamnet]
         onsets_logmel = [math.floor(item / self.win_hope_logmel) for item in onsets_second]
         return onsets_yamnet , onsets_second , onsets_logmel 
-    
+
+    def produce_onset_candidates_exp2 (self, speech_segments):
+              
+              
+        accepted_rate = self.yamnet_settings ["acceptance_snr"]
+        accepted_overlap_second = self.yamnet_settings ["accepted_overlap_second"]
+        
+        # e.g., 21 frames --> almost equal to ~10 seconds of audio
+        # and, for clip of 10 seconds: 21* 0.8 = 17
+        # also, skip first 10 seconds of the audio which is 21 yamnet frames
+                     
+        clip_length_yamnet = self.clip_length_yamnet  # e.g. 21 for 10 second        
+        accepted_plus = int(round(clip_length_yamnet * accepted_rate)) # e.g. 17
+        
+        
+        # scanning the signal (yamnet output scores)
+        scanned_speech = []
+        len_silde_window = 21    
+        for counter in range(len(speech_segments)):
+            slide_window_temp = speech_segments[counter:counter + len_silde_window]
+            speech_portion = sum(slide_window_temp)
+            scanned_speech.append(speech_portion)
+       
+        initial_seq = [onset>= accepted_plus for onset in scanned_speech]
+        initial_seq = numpy.multiply(initial_seq,1)
+        
+        
+        # greedy search
+        accepted_overlap_yamnet = int(round(accepted_overlap_second/ self.win_hope_yamnet)) #  10 yamnet frames: almost 5 seconds       
+        skip_len = 21 - accepted_overlap_yamnet
+        
+        updated_seq = copy.copy(initial_seq)
+        
+        for counter, value in enumerate(updated_seq):
+            if value==1:
+                updated_seq[counter+ 1: counter + skip_len] = 0
+                    
+        
+        
+        onsets_yamnet = [counter for counter,value in enumerate(updated_seq) if value==1]
+
+ 
+        
+        print('###############################################################')        
+        print(self.counter)
+        print(self.video_name)
+        print(self.video_duration)
+        print(onsets_yamnet)       
+        print('###############################################################')
+         
+        onsets_second = [math.floor(item * self.win_hope_yamnet) for item in onsets_yamnet]
+        onsets_logmel = [math.floor(item / self.win_hope_logmel) for item in onsets_second]
+        return onsets_yamnet , onsets_second , onsets_logmel     
 
     
     def update_onset_list (self, accepted_onsets_second):
@@ -158,7 +214,7 @@ class Analysis:
         accepted_embeddings = [embeddings_yamnet[onset:onset + clip_length_yamnet] for onset in onsets_yamnet]     
         
         output_path = os.path.join(self.outputdir , self.split ,  str(self.counter))
-        os.mkdir(output_path)
+        os.makedirs(output_path , exist_ok = True)
         output_name = output_path  + '/af'
         dict_out = {}
         dict_out['video_name'] = self.video_name
@@ -184,7 +240,7 @@ class Analysis:
                 logmels = self.extract_logmel_features (wav_data)
                 scores_yamnet, embeddings_yamnet, logmel_yamnet = self.execute_yamnet(wav_data)
                 speech_segments = self.detect_speech_frames(scores_yamnet)
-                onsets_yamnet , onsets_second , onsets_logmel = self.produce_onset_candidates (speech_segments)
+                onsets_yamnet , onsets_second , onsets_logmel = self.produce_onset_candidates_exp2 (speech_segments)
                 self.update_onset_list (onsets_second)
                 self.save_per_video ( logmel_yamnet, embeddings_yamnet, logmels , onsets_yamnet , onsets_second , onsets_logmel)    
             except:
@@ -200,3 +256,4 @@ class Analysis:
         output_name =  self.outputdir + self.split + '_errors'  
         with open(output_name , 'wb') as handle:
             pickle.dump(self.dict_errors, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        

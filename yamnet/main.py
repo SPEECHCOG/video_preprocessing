@@ -24,11 +24,19 @@ yamnet_settings = cfg.yamnet_settings
 from analysis import Analysis
 
 run_analysis = Analysis( audio_model,dataset, datadir,outputdir,split, yamnet_settings )
+
 run_analysis()
 
-import pickle
-with open("/worktmp/khorrami/project_5/video/data/youcook2/output/train_errors", 'rb') as handle:
-    c = pickle.load(handle)
+# import pickle
+# with open("/worktmp/khorrami/project_5/video/data/youcook2/output/yamnet-based/exp1/test/17/af", 'rb') as handle:
+#     b1 = pickle.load(handle)
+
+# import pickle
+# with open("/worktmp/khorrami/project_5/video/data/youcook2/output/yamnet-based/exp2/test/17/af", 'rb') as handle:
+#     b2 = pickle.load(handle)
+    
+# onsets1 = b1['onsets_second']
+# onsets2 = b2['onsets_second']
 
 # import pickle
 # with open("/worktmp/khorrami/project_5/video/data/youcook2/output/train1/train_errors", 'rb') as handle:
@@ -41,6 +49,52 @@ with open("/worktmp/khorrami/project_5/video/data/youcook2/output/train_errors",
 # for fnum, video_name in b2.items():
 #     all_n.append(fnum)
 
+# # scanning the signal (yamnet output scores)
 
+# scanned_speech = []
+# len_silde_window = 21    
+# for counter in  range(len(speech_segments)):
+#     print(counter)
+#     slide_window_temp = speech_segments[counter:counter + len_silde_window]
+#     speech_portion = sum(slide_window_temp)
+#     scanned_speech.append(speech_portion)
+#     print(speech_portion)
     
-    
+# import numpy
+# initial_seq = [onset>= 17 for onset in scanned_speech]
+# initial_seq = numpy.multiply(initial_seq,1)
+# from matplotlib import pyplot as plt
+# plt.plot(speech_segments)
+# plt.plot(scanned_speech)
+# plt.plot(initial_seq)
+
+# # greedy search
+
+# accepted_overlap_len = 10 # almost 5 seconds
+# skip_len = 21 - accepted_overlap_len
+
+# import copy
+# updated_seq = copy.copy(initial_seq)
+
+# for counter, value in enumerate(updated_seq):
+#     if value==1:
+#         updated_seq[counter+ 1: counter + skip_len] = 0
+            
+# plt.plot(updated_seq)
+# sum(updated_seq)
+# accepted_onsets = [counter for counter,value in enumerate(updated_seq) if value==1]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

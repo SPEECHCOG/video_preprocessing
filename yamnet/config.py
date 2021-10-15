@@ -1,9 +1,9 @@
-
+#  "../../data/input/"
 
 paths = {  
-  "split": "train",
+  "split": "test",
   "datadir": "/tuni/groups/3101050_Specog/corpora/youcook2_dataset",
-  "outputdir": "../../data/youcook2/output/"
+  "outputdir": "../../data/youcook2/output/yamnet-based/exp2/"
 }
 
 basic = {
@@ -24,5 +24,6 @@ yamnet_settings = {
   "class_index_accepted" : [0,1,2,3],
   "clip_length_seconds" : 10,
   "acceptance_snr" : 0.8,
-  "skip_seconds" : 3
+  "skip_seconds" : 3,
+  "accepted_overlap_second": 5
 }
