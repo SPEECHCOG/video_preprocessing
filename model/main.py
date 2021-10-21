@@ -21,8 +21,7 @@ import config as cfg
 
 split = cfg.paths['split']
 featuredir = cfg.paths['featuredir']
-train_feature_type = cfg.paths['train_feature_type']
-test_feature_type = cfg.paths['test_feature_type']
+featuretype = cfg.paths['featuretype']
 outputdir = cfg.paths['outputdir']
 
 audiochannel = cfg.basic['audiochannel']
@@ -35,11 +34,28 @@ feature_settings = cfg.feature_settings
 
 ###############################################################################
 
-model_object = Net(audiochannel , loss, visual_model, layer_name, featuredir,train_feature_type ,test_feature_type, outputdir, split , feature_settings)
+model_object = Net(audiochannel , loss, visual_model, layer_name, featuredir,featuretype , outputdir, split , feature_settings)
+#model_object.train_apc()
 recall10_av , recall10_va = model_object()
 
-kh
-x = model_object.get_audio_features()
+# from matplotlib import pyplot as plt
+# import scipy.io
+# import os
+# path = '/worktmp/khorrami/project_5/video/model/youcook2/graphs/benchmark/clip10/'
+# file = scipy.io.loadmat(path +'apc_visual/recalls.mat', variable_names = ['av_all', 'va_all'])
+# av_all = file['av_all']
+# va_all = file['va_all']
+
+# av_all = av_all[0]
+# va_all = va_all[0]
+# plt.plot(av_all, label = 'audio_to_visual')
+# plt.plot(va_all, label = 'visual_to_audio')
+# plt.xlabel('epochs')
+# plt.ylabel('recall@10')
+# plt.legend()
+# plt.grid()
+# plt.savefig(os.path.join(path,'recalls_benchmark_apc_visual.pdf'))
+            
 
 #feature_object = Features(audiochannel, visual_model, layer_name, featuredir_train, featuredir_test, outputdir, split , feature_settings)
 # model_object.split = 'train'
