@@ -14,26 +14,28 @@ import config as cfg
 split = cfg.paths['split']
 datadir = cfg.paths['datadir']
 outputdir = cfg.paths['outputdir']
+exp_name = cfg.paths['exp_name']
 
 audio_model = cfg.basic['audio_model']
 dataset = cfg.basic['dataset']
+rsd = cfg.basic['run_speech_detection']
 yamnet_settings = cfg.yamnet_settings
 
 ###############################################################################
 
 from analysis import Analysis
 
-run_analysis = Analysis( audio_model,dataset, datadir,outputdir,split, yamnet_settings )
+run_analysis = Analysis( audio_model,dataset, datadir,outputdir,split, yamnet_settings, rsd , exp_name)
 
 run_analysis()
 
-# import pickle
-# with open("/worktmp/khorrami/project_5/video/data/youcook2/output/yamnet-based/exp1/test/17/af", 'rb') as handle:
-#     b1 = pickle.load(handle)
+import pickle
+with open("/worktmp/khorrami/project_5/video/data/youcook2/output/yamnet-based/exp3/test_onsets", 'rb') as handle:
+    b1 = pickle.load(handle)
 
-# import pickle
-# with open("/worktmp/khorrami/project_5/video/data/youcook2/output/yamnet-based/exp2/test/17/af", 'rb') as handle:
-#     b2 = pickle.load(handle)
+import pickle
+with open("/worktmp/khorrami/project_5/video/data/youcook2/output/yamnet-based/exp3/test/137/af", 'rb') as handle:
+    b2 = pickle.load(handle)
     
 # onsets1 = b1['onsets_second']
 # onsets2 = b2['onsets_second']

@@ -13,13 +13,15 @@ import tensorflow_hub as hub
 
 class Analysis:
     
-    def __init__(self,audio_model,dataset, datadir, outputdir, split , yamnet_settings):
+    def __init__(self,audio_model,dataset, datadir, outputdir, split , yamnet_settings, rsd, exp_name):
         
         self.audio_model = audio_model
         self.dataset = dataset
         self.datadir = datadir
         self.outputdir = outputdir
+        self.exp_name = exp_name
         self.split = split
+        self.run_speech_detection = rsd
         
         self.yamnet_settings = yamnet_settings
         
@@ -37,6 +39,8 @@ class Analysis:
 
         self.dict_onsets = {}
         self.dict_errors = {}
+        self.dict_yamnetoutput = {}
+        self.dict_logmel40 = {}
         
     def create_video_list (self ):
         
@@ -55,14 +59,18 @@ class Analysis:
         self.video_duration = duration
         return wav_data
     
-    def resample_signal (self):
-        pass
+    def load_speech_segments (self):
+        file_name = self.outputdir + self.split + '_yamnet_speech' 
+        with open(file_name, 'rb') as handle:
+            speech_segments = pickle.load(handle)
+        return speech_segments
+
     
-    def convert_frame_to_seconds (self):
-        pass
-    
-    def convert_second_to_frame (self):
-        pass
+    def load_logmel_feature (self):
+        file_name = self.outputdir + self.split + '_logmels' 
+        with open(file_name, 'rb') as handle:
+            logmels = pickle.load(handle)
+        return logmels
 
     
     def extract_logmel_features (self, wav_data):
@@ -97,7 +105,7 @@ class Analysis:
     def initialize_global_params (self):
         pass
         
-    def produce_onset_candidates_exp1 (self, speech_segments):
+    def produce_onset_candidates_1 (self, speech_segments):
               
         clip_length_seconds = self.clip_length_seconds       
         accepted_rate = self.yamnet_settings ["acceptance_snr"]
@@ -136,14 +144,14 @@ class Analysis:
         print(self.counter)
         print(self.video_name)
         print(self.video_duration)
-        print(onsets_yamnet)       
+        print(speech_segments)       
         print('###############################################################')
          
         onsets_second = [math.floor(item * self.win_hope_yamnet) for item in onsets_yamnet]
         onsets_logmel = [math.floor(item / self.win_hope_logmel) for item in onsets_second]
         return onsets_yamnet , onsets_second , onsets_logmel 
 
-    def produce_onset_candidates_exp2 (self, speech_segments):
+    def produce_onset_candidates_2 (self, speech_segments):
               
               
         accepted_rate = self.yamnet_settings ["acceptance_snr"]
@@ -159,7 +167,7 @@ class Analysis:
         
         # scanning the signal (yamnet output scores)
         scanned_speech = []
-        len_silde_window = 21    
+        len_silde_window = clip_length_yamnet    
         for counter in range(len(speech_segments)):
             slide_window_temp = speech_segments[counter:counter + len_silde_window]
             speech_portion = sum(slide_window_temp)
@@ -171,7 +179,7 @@ class Analysis:
         
         # greedy search
         accepted_overlap_yamnet = int(round(accepted_overlap_second/ self.win_hope_yamnet)) #  10 yamnet frames: almost 5 seconds       
-        skip_len = 21 - accepted_overlap_yamnet
+        skip_len = clip_length_yamnet - accepted_overlap_yamnet
         
         updated_seq = copy.copy(initial_seq)
         
@@ -182,54 +190,75 @@ class Analysis:
         
         
         onsets_yamnet = [counter for counter,value in enumerate(updated_seq) if value==1]
-
+        onsets_second = [math.floor(item * self.win_hope_yamnet) for item in onsets_yamnet]
+        onsets_logmel = [math.floor(item / self.win_hope_logmel) for item in onsets_second]
  
         
         print('###############################################################')        
         print(self.counter)
         print(self.video_name)
         print(self.video_duration)
-        print(onsets_yamnet)       
+        print(onsets_second)       
         print('###############################################################')
          
-        onsets_second = [math.floor(item * self.win_hope_yamnet) for item in onsets_yamnet]
-        onsets_logmel = [math.floor(item / self.win_hope_logmel) for item in onsets_second]
+
         return onsets_yamnet , onsets_second , onsets_logmel     
 
-    
-    def update_onset_list (self, accepted_onsets_second):
-        
-        self.dict_onsets[self.video_name] = {'onsets': accepted_onsets_second , 'folder_name':self.counter}
 
-    def update_error_list (self):
+    def update_yamnet_output (self, speech_segments):
+        self.dict_yamnetoutput[self.video_name] = speech_segments
+
+    def update_logmel40_list (self, logmels):
+        self.dict_logmel40[self.video_name] = logmels
         
+    def update_onset_list (self, accepted_onsets_second):      
+        self.dict_onsets[self.video_name] = {'onsets': accepted_onsets_second , 'folder_name':self.counter}        
+
+    def update_error_list (self):       
         self.dict_errors[self.counter] = self.video_name       
+
+    def save_yamnet_output (self):
+        output_name =  self.outputdir + self.split + '_yamnet_speech' 
+        with open(output_name, 'wb') as handle:
+            pickle.dump(self.dict_yamnetoutput, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def save_logmel40 (self):
+        output_name =  self.outputdir + self.split + '_logmels' 
+        with open(output_name, 'wb') as handle:
+            pickle.dump(self.dict_logmel40, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            
+    def save_onsets(self):
+        output_name =  os.path.join(self.outputdir, self.exp_name , self.split + '_onsets')   
+        with open(output_name , 'wb') as handle:
+            pickle.dump(self.dict_onsets, handle, protocol=pickle.HIGHEST_PROTOCOL)
     
-    def save_per_video (self, logmel_yamnet, embeddings_yamnet, logmels , onsets_yamnet , onsets_second , onsets_logmel):
- 
-        clip_length_yamnet = self.clip_length_yamnet
-        clip_length_logmel = self.clip_length_logmel     
-        accepted_yamnetlogmels = [logmel_yamnet[onset:onset + clip_length_logmel] for onset in onsets_logmel]
-        accepted_logmels = [logmels[onset:onset + clip_length_logmel] for onset in onsets_logmel] 
-        accepted_embeddings = [embeddings_yamnet[onset:onset + clip_length_yamnet] for onset in onsets_yamnet]     
-        
-        output_path = os.path.join(self.outputdir , self.split ,  str(self.counter))
+    def save_error_list (self):
+        output_name =  os.path.join(self.outputdir, self.split + '_errors')  
+        with open(output_name , 'wb') as handle:
+            pickle.dump(self.dict_errors, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    
+    def save_per_video (self, logmel_yamnet, onsets_second , accepted_logmel40, accepted_logmel64, accepted_embeddings):
+        output_path = os.path.join(self.outputdir , self.exp_name, self.split ,  str(self.counter))
         os.makedirs(output_path , exist_ok = True)
         output_name = output_path  + '/af'
         dict_out = {}
         dict_out['video_name'] = self.video_name
         dict_out['video_duration'] = self.video_duration
         dict_out['onsets_second'] = onsets_second
-        dict_out['logmel40'] = accepted_logmels
-        dict_out['logmel64'] = accepted_yamnetlogmels
+        dict_out['logmel40'] = accepted_logmel40
+        dict_out['logmel64'] = accepted_logmel64
         dict_out['embeddings'] = accepted_embeddings           
         with open(output_name, 'wb') as handle:
             pickle.dump(dict_out, handle, protocol=pickle.HIGHEST_PROTOCOL)
           
-        
+    def find_speech_segments(self, wav_data): 
+        scores_yamnet, embeddings_yamnet, logmel_yamnet = self.execute_yamnet(wav_data)
+        speech_segments = self.detect_speech_frames(scores_yamnet)
+        self.update_yamnet_output(speech_segments)
+        return speech_segments, embeddings_yamnet, logmel_yamnet 
     
-    def __call__ (self):
-        
+    def to_run_speech_detection(self):
         video_list = self.create_video_list()
         self.model = hub.load('https://tfhub.dev/google/yamnet/1')
         for video_name in video_list:         
@@ -237,23 +266,92 @@ class Analysis:
             # do all analysis
             try:
                 wav_data = self.load_video ()
+    
+                speech_segments, embeddings_yamnet, logmel_yamnet = self.find_speech_segments(wav_data)
+                onsets_yamnet , onsets_second , onsets_logmel = self.produce_onset_candidates_2 (speech_segments)
                 logmels = self.extract_logmel_features (wav_data)
-                scores_yamnet, embeddings_yamnet, logmel_yamnet = self.execute_yamnet(wav_data)
-                speech_segments = self.detect_speech_frames(scores_yamnet)
-                onsets_yamnet , onsets_second , onsets_logmel = self.produce_onset_candidates_exp2 (speech_segments)
+                self.update_logmel40_list(logmels)
+                
+                accepted_logmel40 = [logmels[onset:onset + self.clip_length_logmel] for onset in onsets_logmel]     
+                accepted_logmel64 = [logmel_yamnet[onset:onset + self.clip_length_logmel] for onset in onsets_logmel]
+                accepted_embeddings = [embeddings_yamnet[onset:onset + self.clip_length_yamnet] for onset in onsets_yamnet]
                 self.update_onset_list (onsets_second)
-                self.save_per_video ( logmel_yamnet, embeddings_yamnet, logmels , onsets_yamnet , onsets_second , onsets_logmel)    
+                self.save_per_video (onsets_second , onsets_logmel, accepted_logmel40, accepted_logmel64,accepted_embeddings )
+                
             except:
                 self.update_error_list()
-
-
-            self.counter += 1
+                
+            self.counter += 1 
             
-        output_name =  self.outputdir + self.split + '_onsets'  
-        with open(output_name , 'wb') as handle:
-            pickle.dump(self.dict_onsets, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        self.save_yamnet_output()
+        self.save_logmel40()
+        self.save_onsets()
+        self.save_error_list() 
+        
+    def run_from_file (self):
+        
+        dict_speech_segments = self.load_speech_segments()
+        dict_logmels = self.load_logmel_feature()
+        
+        video_list = self.create_video_list()
+        self.model = hub.load('https://tfhub.dev/google/yamnet/1')
+        
+        for video_name in video_list: 
+            
+            self.video_name = video_name
+            print('video name is .............')
+            print(self.video_name)
+            print('............')
+            try:
+                speech_segments = dict_speech_segments[self.video_name]
+                print('speech is .............')
+                print(len(speech_segments))
+                print('............')
+                onsets_yamnet , onsets_second , onsets_logmel = self.produce_onset_candidates_2 (speech_segments)
+                
+                logmels = dict_logmels[self.video_name]
+                accepted_logmel40 = [logmels[onset:onset + self.clip_length_logmel] for onset in onsets_logmel] 
+                accepted_logmel64 = []
+                accepted_embeddings = []
+                self.update_onset_list (onsets_second)
+                self.save_per_video (onsets_second , onsets_logmel, accepted_logmel40, accepted_logmel64, accepted_embeddings )
+                
+            except:
+                self.update_error_list()
+                
+            self.counter += 1    
+            
+            
+        self.save_onsets()
+        
+        
+    def __call__ (self):
+        
+        if self.run_speech_detection == True:
+            self.to_run_speech_detection()
+        else:
+            self.run_from_file()
+            
+        
 
-        output_name =  self.outputdir + self.split + '_errors'  
-        with open(output_name , 'wb') as handle:
-            pickle.dump(self.dict_errors, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                
+ 
+        
+
+        
+        
+        
+                    
+           
+
+
+            
+        
+        
+        
+
+           
+        
+
+        
         
