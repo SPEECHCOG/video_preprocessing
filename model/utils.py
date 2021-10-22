@@ -148,7 +148,7 @@ def mms_loss(y_true , y_pred):
     S = K.squeeze( K.batch_dot(out_audio, out_visual, axes=[-1,-1]) , axis = 0)
        
     # ...................................................... method 0
-    margine = 0.01
+    margine = 0.001
 
     def margine_softmax(Sinitial ,margine):
         S = Sinitial - K.max(Sinitial, axis = 0)    

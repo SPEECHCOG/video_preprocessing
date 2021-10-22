@@ -14,7 +14,7 @@ from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Lambda
 
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import  Input, Reshape, Dense, Dropout, BatchNormalization, dot, Softmax, Permute, UpSampling1D
+from tensorflow.keras.layers import  Input, Reshape, Dense, Dropout, BatchNormalization, dot, Softmax, Permute, UpSampling1D, Masking
 from tensorflow.keras.layers import  MaxPooling1D,AveragePooling1D,  Conv1D, Concatenate, ReLU, Add, Multiply, GRU
 from tensorflow.keras.optimizers import Adam
 
@@ -255,7 +255,7 @@ class Net():
 
     def build_resDAVEnet (self, Xshape):     
     
-        audio_sequence = Input(shape=Xshape) #Xshape = (1000, 40)
+        audio_sequence = Input(shape=Xshape) #Xshape = (5000, 40)
         
         strd = 2
         
@@ -324,6 +324,7 @@ class Net():
         # out_audio_channel = outAtt
         
         # poling
+        out_4 = Masking (mask_value=0.0, input_shape=out_4.shape[1:])(out_4)
         out_audio_channel  = AveragePooling1D(512,padding='same')(out_4) 
         out_audio_channel = Reshape([out_audio_channel.shape[2]])(out_audio_channel) 
         
@@ -365,7 +366,7 @@ class Net():
         # out_visual_channel = outAtt
         
         #max pooling
-        pool_visual = MaxPooling1D(20,padding='same')(bn_visual)
+        pool_visual = MaxPooling1D(50,padding='same')(bn_visual)
         out_visual_channel = Reshape([pool_visual.shape[2]])(pool_visual)
         
         
@@ -441,7 +442,7 @@ class Net():
         
         visual_embedding_model,audio_embedding_model,final_model = self.build_network( Xshape , Yshape )
         
-        final_model.evaluate([Ytest,Xtest], b_val, batch_size=120)
+        final_model.evaluate([Ytest,Xtest], b_val, batch_size=128)
     
  
         self.split = "train"
@@ -458,10 +459,10 @@ class Net():
         
         del visual_features_train  , audio_features_train    
   
-        for epoch in range(49):
+        for epoch in range(15):
             
             
-            final_model.fit([Y,X], b, shuffle=True, epochs=5, batch_size=120)
+            final_model.fit([Y,X], b, shuffle=True, epochs=5, batch_size=128)
             
             # self.split = "val"
             # audio_features_train = self.get_audio_features()            
@@ -471,7 +472,7 @@ class Net():
             # final_model.fit([Y,X], b, shuffle=False, epochs=1, batch_size=120) 
             # del Y,X,b
             
-            final_model.evaluate([Ytest,Xtest], b_val, batch_size=120)
+            final_model.evaluate([Ytest,Xtest], b_val, batch_size=128)
 
             audio_embeddings = audio_embedding_model.predict(Xtest)    
             visual_embeddings = visual_embedding_model.predict(Ytest) 
@@ -496,7 +497,7 @@ class Net():
             print(recall10_va)
             
             ########### saving the results     
-            savepath = '/worktmp/khorrami/project_5/video/model/youcook2/graphs/benchmark/clip20/'
+            savepath = '/worktmp/khorrami/project_5/video/model/youcook2/graphs/benchmark/clip50/'
             file_name = 'recalls_logmel_benchmark'
             self.av_all.append(recall10_av)
             self.va_all.append(recall10_va)
@@ -507,7 +508,7 @@ class Net():
             plt.xlabel('epochs*5')
             plt.ylabel('recall@10')
             plt.grid()
-            plt.title('logmel features- benchmark with 20 seconds clip')
+            plt.title('logmel features- benchmark with 50 seconds clip')
             plt.savefig(os.path.join(savepath,file_name + '.pdf'))
             
         return self.av_all , self.va_all            

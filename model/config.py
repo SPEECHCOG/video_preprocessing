@@ -19,5 +19,5 @@ basic = {
 
 feature_settings = {
   "audio_sample_rate": 16000,
-  "zeropadd": 20,
+  "zeropadd": 50,
 }
