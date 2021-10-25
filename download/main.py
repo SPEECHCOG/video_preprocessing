@@ -53,7 +53,7 @@ with open(vid_file) as f:
             missing_vid_lst.append(rcp_type + '_' + vid_name)
             list1.append(rcp_type + '_' + vid_name)
             list2.append(vid_url)
-            #os.system(' '.join(("youtube-dl -f worstvideo+worstaudio -o", vid_newpath, vid_url)))
+            os.system(' '.join(("youtube-dl -o", vid_newpath, vid_url)))
             print('[INFO] Cannot download {} video {}'.format(split, vid_name))
 import scipy.io
 

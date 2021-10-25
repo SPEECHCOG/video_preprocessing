@@ -1,7 +1,7 @@
 
 
 paths = {  
-  "split": "train",
+  "split": "val",
   "datadir": "/tuni/groups/3101050_Specog/corpora/youcook2_dataset",
   "outputdir": "../../../data/youcook2/output/ann-based/"
 }
