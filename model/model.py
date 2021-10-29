@@ -256,10 +256,10 @@ class Net():
     def build_resDAVEnet (self, Xshape):     
     
         audio_sequence = Input(shape=Xshape) #Xshape = (5000, 40)
-        #audio_sequence_masked = Masking (mask_value=0., input_shape=Xshape)(audio_sequence)
+        audio_sequence_masked = Masking (mask_value=0., input_shape=Xshape)(audio_sequence)
         strd = 2
         
-        x0 = Conv1D(128,1,strides = 1, padding="same")(audio_sequence)
+        x0 = Conv1D(128,1,strides = 1, padding="same")(audio_sequence_masked)
         x0 = BatchNormalization(axis=-1)(x0)
         x0 = ReLU()(x0) 
           
@@ -322,7 +322,7 @@ class Net():
         # outAtt = Concatenate(axis=-1)([poolAtt, poolquery])
         # outAtt = Reshape([2048],name='reshape_out_attA')(outAtt)
         # out_audio_channel = outAtt
-        out_4 = Masking (mask_value=0., input_shape=out_4.shape[1:]) (out_4)
+        #out_4 = Masking (mask_value=0., input_shape=out_4.shape[1:]) (out_4)
         
         # poling
         
@@ -498,7 +498,7 @@ class Net():
             print(recall10_va)
             
             ########### saving the results     
-            savepath = '/worktmp/khorrami/project_5/video/model/youcook2/graphs/benchmark/clip50/'
+            savepath = '/worktmp/khorrami/project_5/video/model/youcook2/graphs/benchmark/clip30/'
             file_name = 'recalls_logmel_benchmark'
             self.av_all.append(recall10_av)
             self.va_all.append(recall10_va)
@@ -509,7 +509,7 @@ class Net():
             plt.xlabel('epochs*5')
             plt.ylabel('recall@10')
             plt.grid()
-            plt.title('logmel features- benchmark with 50 seconds clip')
+            plt.title('logmel features- benchmark with 30 seconds clip')
             plt.savefig(os.path.join(savepath,file_name + '.pdf'))
             
         return self.av_all , self.va_all            
