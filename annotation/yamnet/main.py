@@ -14,8 +14,6 @@ import config as cfg
 split = cfg.paths['split']
 datadir = cfg.paths['datadir']
 outputdir = cfg.paths['outputdir']
-annfile_trainval = cfg.paths["annpath-trainval"]
-annfile_test = cfg.paths["annpath-test"]
 
 audio_model = cfg.basic['audio_model']
 dataset = cfg.basic['dataset']
@@ -25,18 +23,18 @@ yamnet_settings = cfg.yamnet_settings
 
 from analysis import Analysis
 
-run_analysis = Analysis( audio_model,dataset, datadir, outputdir,split,annfile_trainval,annfile_test,  yamnet_settings )
+run_analysis = Analysis( audio_model,dataset, datadir, outputdir,split,  yamnet_settings )
 run_analysis()
 
-# import pickle
+# # import pickle
 # import json
-# with open("/worktmp/khorrami/project_5/video/data/youcook2/annotations/youcookii_annotations_trainval.json", 'rb') as handle:
+# with open("/run/media/hxkhkh/b756dee3-de7e-4cdd-883b-ac95a8d00407/video/youcook2/annotations/youcookii_annotations_test_segments_only.json", 'rb') as handle:
 #     b = json.load(handle)
 # database = b['database']
 
-# import pickle
-# with open("/worktmp/khorrami/project_5/video/data/youcook2/output/ann-based/test_errors", 'rb') as handle:
-#     yamnet = pickle.load(handle)
+import pickle
+with open("/worktmp/khorrami/project_5/video/features/ouput/youcook2/ann-based/validation/0/af", 'rb') as handle:
+    af = pickle.load(handle)
 
 # b = {}    
 # for video_name, onset_dict in b2.items():
@@ -46,5 +44,6 @@ run_analysis()
 #     all_n.append(fnum)
 
 
-    
+
+
     
