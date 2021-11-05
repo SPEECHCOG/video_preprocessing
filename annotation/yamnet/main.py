@@ -26,22 +26,22 @@ from analysis import Analysis
 run_analysis = Analysis( audio_model,dataset, datadir, outputdir,split,  yamnet_settings )
 run_analysis()
 
-# # import pickle
-# import json
-# with open("/run/media/hxkhkh/b756dee3-de7e-4cdd-883b-ac95a8d00407/video/youcook2/annotations/youcookii_annotations_test_segments_only.json", 'rb') as handle:
-#     b = json.load(handle)
-# database = b['database']
+import json
+with open("/run/media/hxkhkh/b756dee3-de7e-4cdd-883b-ac95a8d00407/video/youcook2/annotations/youcookii_annotations_trainval.json", 'rb') as handle:
+    b = json.load(handle)
+database = b['database']
 
 import pickle
-with open("/worktmp/khorrami/project_5/video/features/ouput/youcook2/ann-based/validation/0/af", 'rb') as handle:
+with open("/worktmp/khorrami/project_5/video/features/ouput/youcook2/ann-based/training_onsets", 'rb') as handle:
     af = pickle.load(handle)
 
-# b = {}    
-# for video_name, onset_dict in b2.items():
-#     b[video_name] = onset_dict
-# all_n = []
-# for fnum, video_name in b2.items():
-#     all_n.append(fnum)
+import csv 
+with open("/run/media/hxkhkh/b756dee3-de7e-4cdd-883b-ac95a8d00407/video/youcook2/features/feat_csv/train_frame_feat_csv/101/17v08qtr8UM/0004") as handle:
+    vf = csv.reader(handle)
+    rows = []
+    for row in vf:
+        rows.append(row)
+    
 
 
 
