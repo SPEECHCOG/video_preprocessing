@@ -23,21 +23,21 @@ class Analysis:
         self.video_duration = 0
         self.output_subpath = ""
        
-        self.dict_errors = {}
-        
-    def create_video_list (self ):
-        
-        video_dir = os.path.join(self.datadir, self.split)
-        video_list = os.listdir(video_dir)
+        self.dict_errors = {}        
+    
+    def create_video_list (self ):        
+        video_dir = os.path.join(self.datadir, 'videos' , self.split) 
+        video_recepies = os.listdir(video_dir)
+        video_list = []
+        for rec in video_recepies:
+            files = os.listdir(os.path.join(video_dir, rec))
+            video_list.extend([os.path.join(self.split , rec ,f) for f in files])
         return video_list
- 
+     
     
     def load_video (self):
-        
-        video_name = self.video_name
-        video_sample = os.path.join(self.datadir,self.split, video_name) 
-        
-        #video_sample = "../data/input/101_YSes0R7EksY.mp4"
+        # e.g. "testing/101/YSes0R7EksY.mp4"
+        video_sample = os.path.join(self.datadir, 'videos' , self.video_name)       
         cap = cv.VideoCapture(video_sample)
         if (cap.isOpened()== False):
             print("Error opening video stream or file")
@@ -62,11 +62,17 @@ class Analysis:
                 output_name = self.output_subpath  +  "/" + str(counter_second) + ".jpg"
                 print(output_name)
                 ms =  second * 1000
-                cap.set(cv.CAP_PROP_POS_MSEC, ms)      
-                ret,frame = cap.read()                   
-                cv.imwrite(output_name, frame)                      
- 
-    
+                cap.set(cv.CAP_PROP_POS_MSEC, ms) 
+                
+                ret,frame = cap.read()
+                print(counter_second)
+                print(ret)
+                   
+                if ret:                  
+                    cv.imwrite(output_name, frame)                      
+                    # output_name = '/worktmp/khorrami/project_5/video/features/ouput/youcook2/ann-based/testing/153/images/' + counter_second + 'testing.jpg'
+                    # cv.imwrite(output_name, frame)
+                   
     def load_dict_onsets (self):
         
         input_name =  self.outputdir + self.split + '_onsets'  
@@ -80,7 +86,7 @@ class Analysis:
           
         
     
-    def __call__ (self):
+    def __call__ (self): # 153 , 'testing/228/GUxh6e1PQ6A.mkv'
         
         # video_list = self.create_video_list()
         dict_onsets = self.load_dict_onsets ()
@@ -88,10 +94,11 @@ class Analysis:
         for video_name, value in dict_onsets.items(): 
             
             print(self.counter)
-            self.video_name = video_name
+            self.video_name = video_name # e.g. "testing/101/YSes0R7EksY.mp4"
             accepted_onsets_second = value['onsets']
             accepted_offsets_second = value['offsets']
             self.folder_counter = value['folder_name']
+            
             cap = self.load_video ()
             self.write_clip_images(cap, accepted_onsets_second, accepted_offsets_second)
             # try:           

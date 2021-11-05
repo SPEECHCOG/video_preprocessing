@@ -25,9 +25,9 @@ video_settings = cfg.video_settings
 
 ###############################################################################
 
-#from analysis import Analysis
+# from analysis import Analysis
 
-# run_analysis = Analysis( audio_model,dataset, datadir,outputdir,split, video_settings )
+# run_analysis = Analysis( audio_model, dataset, datadir, outputdir, split, video_settings )
 # run_analysis()
 
 
@@ -37,11 +37,12 @@ visual_feature_extractor = VisualFeatureExtractor( visual_model,layer_name , dat
 visual_feature_extractor()
 
 
-# import pickle
-# with open("/worktmp/khorrami/project_5/video/data/youcook2/output/ann-based/test/16/vf_resnet152", 'rb') as handle:
-#     b = pickle.load(handle)
+import pickle
+with open("/worktmp/khorrami/project_5/video/features/ouput/youcook2/ann-based/validation/2/vf_resnet152", 'rb') as handle:
+    dict_onsets = pickle.load(handle)
     
 # # run_analysis.split
 # import pickle
 # with open("/worktmp/khorrami/project_5/video/data/youcook2/output/test/1/vf_resnet152", 'rb') as handle:
 #     c = pickle.load(handle)
+
