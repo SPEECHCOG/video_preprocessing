@@ -1,7 +1,7 @@
 
 
 paths = {  
-  "split": "validation",
+  "split": "training",
   "datadir": "/run/media/hxkhkh/b756dee3-de7e-4cdd-883b-ac95a8d00407/video/youcook2",
   "outputdir": "../../../features/ouput/youcook2/ann-based/",
 }

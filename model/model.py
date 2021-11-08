@@ -21,118 +21,17 @@ from tensorflow.keras.optimizers import Adam
 
 
 
-class Net():
-    def __init__(self, audiochannel, loss, visual_model, layer_name, featuredir,featuretype , outputdir, split , feature_settings):
-        self.audiochannel = audiochannel
-        self.loss = loss
-        self.visual_model = visual_model
-        self.featuredir = featuredir
-        self.featuretype = featuretype
-        
-        self.outputdir = outputdir
-        self.split = split
-
-        
-        self.feature_settings = feature_settings     
-        self.zeropadd = self.feature_settings["zeropadd"]
-        self.visual_model = visual_model
-        self.layer_name = layer_name
-         
-        self.video_name = ''
-        self.folder_name = ''
-        self.feature_path = '' 
-        
-        self.dict_errors = {}
-        self.av_all = []
-        self.va_all = []
-        
-    def load_dict_onsets (self): 
-        input_path = os.path.join(self.featuredir , self.featuretype , self.split)
-        input_name =  input_path + '_onsets'  
-        with open(input_name, 'rb') as handle:
-            dict_onsets = pickle.load(handle)
-        return dict_onsets        
-
-
-    def load_af (self):       
-        af_file = os.path.join(self.feature_path , 'af')   
-        with open(af_file, 'rb') as handle:
-            af = pickle.load(handle)           
-        return af    
-
-    def load_vf (self):       
-        vf_file = os.path.join(self.feature_path , 'vf_' + self.visual_model)   
-        with open(vf_file, 'rb') as handle:
-            vf = pickle.load(handle)           
-        return vf   
+class AVnet():
     
-    def update_error_list (self):
-        self.dict_errors[self.video_name] = self.folder_name
-          
-    
-    def get_audio_features (self):
+    def __init__(self, model_config):
+        self.audio_model_name = model_config["audio_model_name"]
+        self.visual_model_name = model_config["visual_model_name"]
+        self.visual_layer_name = model_config["visual_layer_name"]      
+        self.loss = model_config["loss"]
+        self.zeropadd = model_config["zeropadd_size"]
 
-        dict_onsets = self.load_dict_onsets ()  
-        af_all = [] 
-               
-        for video_name, value in dict_onsets.items():           
-            self.video_name = video_name
-            self.folder_name = value['folder_name']            
-            if len(value['onsets']) == 0:
-                self.update_error_list()
-            else:
-                self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name))      
-                af = self.load_af()            
-                logmel_all = af['logmel40'] 
-                logmel = logmel_all#[0:10]
-                if self.featuretype == "ann-based":                  
-                    af_all.append(logmel)
-                elif self.featuretype == "yamnet-based":
-                    af_all.extend(logmel)
-                    
-        if self.featuretype == "ann-based": 
-            audio_features = []
-            len_of_longest_sequence = 100 * self.zeropadd
-            for af_video in af_all:       
-                logmel_padded = preparX (af_video,len_of_longest_sequence )
-                audio_features.extend(logmel_padded)
-            audio_features = numpy.array(audio_features)
-        elif self.featuretype == "yamnet-based":
-            audio_features = numpy.array(af_all)      
-        return audio_features
-    
-    def get_visual_features (self):
-        dict_onsets = self.load_dict_onsets ()
-       
-        vf_all = []
-
-        for video_name, value in dict_onsets.items():   
-            self.video_name = video_name
-            self.folder_name = value['folder_name']                                  
-            self.feature_path = os.path.join(self.featuredir, self.featuretype , self.split ,  str(self.folder_name))      
-            vf = self.load_vf()
-            resnet_all = vf['resnet152_avg_pool'] # resnet features for each onset (10*2048)
-            resnet = resnet_all #[0:10] 
-            if self.featuretype == "ann-based":
-                len_of_longest_sequence = self.zeropadd
-                resnet_padded = preparY (resnet , len_of_longest_sequence) # 50*2048
-                vf_all.append(resnet_padded)
-            elif self.featuretype == "yamnet-based":
-                vf_all.extend(resnet) 
-                
-        if self.featuretype == "ann-based": 
-            visual_features = []
-            len_of_longest_sequence =  self.zeropadd
-            for vf_video in vf_all:       
-                resnet_padded = preparY (vf_video , len_of_longest_sequence) # 50*2048
-                visual_features.extend(resnet_padded)
-            visual_features = numpy.array(visual_features)
-        elif self.featuretype == "yamnet-based":
-            visual_features = numpy.array(vf_all)      
         
-        
-        return visual_features  
-
+   
     def build_apc (self, Xshape):      
         audio_sequence = Input(shape=Xshape) #Xshape = (995, 40)
         prenet = Dense(512, name = 'prenet', activation='relu')(audio_sequence)
@@ -176,50 +75,7 @@ class Net():
         
         return predictor, apc
     
-    def train_apc (self ):
-        l = 5
-        predictor, apc = self.build_apc(Xshape= (995, 40))  
-        
-        val_loss_init = 1000
-        predictor.summary()
-       
-        self.split = "train"
-        audio_features = self.get_audio_features()
-        xtrain = audio_features[:,0:-l,:]
-        ytrain = audio_features[:,l:,:] 
-        
-        # visual block
-        #visual_features_train = self.get_visual_features()
-       
-        
-        self.split = "val"
-        audio_features = self.get_audio_features()
-        xval = audio_features[:,0:-l,:]
-        yval = audio_features[:,l:,:]
-        
-        # visual block
-        #visual_features_val = self.get_visual_features()
 
-        for epoch in range(50):
-            predictor.fit(xtrain, ytrain , epochs=5, shuffle = True, batch_size=120)
-            val_loss = predictor.evaluate(xval, yval, batch_size=120)       
-            if val_loss[0] < val_loss_init:
-                val_loss_init = val_loss[0]
-                weights = predictor.get_weights()
-                predictor.set_weights(weights)
-                predictor.save_weights('%smodel_weights.h5' % self.outputdir)
-
-    def produce_apc_features (self,data):
-        predictor, apc = self.build_apc(Xshape= (995, 40)) 
-        predictor.summary()
-        apc.summary()
-        predictor.load_weights('%smodel_weights.h5' % self.outputdir)
-        apc.layers[1].set_weights = predictor.layers[1].get_weights
-        apc.layers[2].set_weights = predictor.layers[2].get_weights
-        apc.layers[3].set_weights = predictor.layers[3].get_weights
-        apc.layers[4].set_weights = predictor.layers[4].get_weights
-        apc_features = apc.predict(data)
-        return apc_features
         
     def build_simple_audio_model (self,Xshape ):     
         dropout_size = 0.3
@@ -381,9 +237,9 @@ class Net():
     def build_network(self, Xshape , Yshape):
            
         visual_sequence , out_visual_channel , visual_model = self. build_visual_model (Yshape)
-        if self.audiochannel=="resDAVEnet":        
+        if self.audio_model_name == "resDAVEnet":        
             audio_sequence , out_audio_channel , audio_model = self.build_resDAVEnet (Xshape)            
-        elif  self.audiochannel=="simplenet": 
+        elif  self.audio_model_name == "simplenet": 
             audio_sequence , out_audio_channel , audio_model = self.build_simple_audio_model (Xshape)
         
         
@@ -420,97 +276,5 @@ class Net():
  
        
 
-    def __call__ (self):
 
-        self.split = "val"
-        print('.........................................in testing feature type is')
-        self.featuretype = 'ann-based'
-        print(self.featuretype)
-        
-        audio_features_test = self.get_audio_features() 
-        #APC
-        # l = 5
-        # audio_features_test = self.produce_apc_features (audio_features_test[:,:-l,:]) 
-          
-        visual_features_test = self.get_visual_features()
-        Ytest, Xtest, b_val = prepare_data (audio_features_test , visual_features_test , self.loss) 
-        
-        
-        Xshape = numpy.shape(audio_features_test)[1:]        
-        Yshape = numpy.shape(visual_features_test)[1:] 
-        del audio_features_test, visual_features_test
-       
-        
-        visual_embedding_model,audio_embedding_model,final_model = self.build_network( Xshape , Yshape )
-        
-        final_model.evaluate([Ytest,Xtest], b_val, batch_size=128)
-    
- 
-        self.split = "train"
-        self.featuretype = 'ann-based'
-        print('...................in training feature type is')
-        print(self.featuretype)
-        
-        audio_features_train = self.get_audio_features()
-        #APC
-        #audio_features_train = self.produce_apc_features (audio_features_train[:,:-5,:]) 
-        
-        visual_features_train = self.get_visual_features()
-        Y,X,b = prepare_data (audio_features_train , visual_features_train  , self.loss) 
-        
-        del visual_features_train  , audio_features_train    
-  
-        for epoch in range(15):
-            
-            
-            final_model.fit([Y,X], b, shuffle=True, epochs=5, batch_size=128)
-            
-            # self.split = "val"
-            # audio_features_train = self.get_audio_features()            
-            # visual_features_train = self.get_visual_features()
-            # Y, X, b = prepare_data (audio_features_train , visual_features_train , self.loss)
-            # del audio_features_train, visual_features_train
-            # final_model.fit([Y,X], b, shuffle=False, epochs=1, batch_size=120) 
-            # del Y,X,b
-            
-            final_model.evaluate([Ytest,Xtest], b_val, batch_size=128)
-
-            audio_embeddings = audio_embedding_model.predict(Xtest)    
-            visual_embeddings = visual_embedding_model.predict(Ytest) 
-            # audio_embeddings = numpy.squeeze(audio_embeddings)
-            # visual_embeddings = numpy.squeeze(visual_embeddings)
-            print('checking embedd shape')
-            print(audio_embeddings.shape)
-            print(visual_embeddings.shape)
-            
-            ########### calculating Recall@10                    
-            poolsize =  3000
-            number_of_trials = 1
-            number_of_samples = len(Xtest)
-            recall_av_vec = calculate_recallat10( audio_embeddings, visual_embeddings, number_of_trials,  number_of_samples  , poolsize )          
-            recall_va_vec = calculate_recallat10( visual_embeddings , audio_embeddings, number_of_trials,  number_of_samples , poolsize ) 
-            recall10_av = numpy.mean(recall_av_vec)/(poolsize)
-            recall10_va = numpy.mean(recall_va_vec)/(poolsize)         
-            del audio_embeddings, visual_embeddings
-            print('............. results for retrieval ............ av and va ')
-            print(epoch)
-            print(recall10_av)
-            print(recall10_va)
-            
-            ########### saving the results     
-            savepath = '/worktmp/khorrami/project_5/video/model/youcook2/graphs/benchmark/clip30/'
-            file_name = 'recalls_logmel_benchmark'
-            self.av_all.append(recall10_av)
-            self.va_all.append(recall10_va)
-            savemat(os.path.join(savepath,file_name +'.mat'), {"av_all":self.av_all,"va_all":self.va_all})
-            
-            plt.plot(self.av_all)
-            plt.plot(self.va_all)
-            plt.xlabel('epochs*5')
-            plt.ylabel('recall@10')
-            plt.grid()
-            plt.title('logmel features- benchmark with 30 seconds clip')
-            plt.savefig(os.path.join(savepath,file_name + '.pdf'))
-            
-        return self.av_all , self.va_all            
             

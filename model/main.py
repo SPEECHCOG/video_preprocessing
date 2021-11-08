@@ -1,4 +1,4 @@
-from model import Net
+from train_validate import Train_AVnet
 #from features import Features
 ###############################################################################
 
@@ -10,51 +10,22 @@ from model import Net
 
 ###############################################################################
 
-# import tensorflow as tf
-# config = tf.ConfigProto()
-# config.gpu_options.allow_growth = False
-# config.gpu_options.per_process_gpu_memory_fraction=0.7
-# sess = tf.Session(config=config)
+import tensorflow as tf
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = False
+config.gpu_options.per_process_gpu_memory_fraction=0.7
+sess = tf.Session(config=config)
  
 ###############################################################################  
 import config as cfg
 
-split = cfg.paths['split']
-featuredir = cfg.paths['featuredir']
-featuretype = cfg.paths['featuretype']
-outputdir = cfg.paths['outputdir']
-
-audiochannel = cfg.basic['audiochannel']
-loss = cfg.basic['loss']
-audio_model = cfg.basic['audio_model']
-visual_model = cfg.basic['visual_model']
-layer_name = cfg.basic['layer_name']
-
-feature_settings = cfg.feature_settings
-
+training_config = cfg.training_config
+model_config = cfg.model_config
 ###############################################################################
 
-model_object = Net(audiochannel , loss, visual_model, layer_name, featuredir,featuretype , outputdir, split , feature_settings)
-#model_object.train_apc()
-recall10_av , recall10_va = model_object()
+self = Train_AVnet(model_config , training_config)
+self()
 
-# from matplotlib import pyplot as plt
-# import scipy.io
-# import os
-# path = '/worktmp/khorrami/project_5/video/model/youcook2/graphs/benchmark/clip10/'
-# file = scipy.io.loadmat(path +'apc_visual/recalls.mat', variable_names = ['av_all', 'va_all'])
-# av_all = file['av_all']
-# va_all = file['va_all']
-
-# av_all = av_all[0]
-# va_all = va_all[0]
-# plt.plot(av_all, label = 'audio_to_visual')
-# plt.plot(va_all, label = 'visual_to_audio')
-# plt.xlabel('epochs')
-# plt.ylabel('recall@10')
-# plt.legend()
-# plt.grid()
-# plt.savefig(os.path.join(path,'recalls_benchmark_apc_visual.pdf'))
             
 
 #feature_object = Features(audiochannel, visual_model, layer_name, featuredir_train, featuredir_test, outputdir, split , feature_settings)
@@ -64,17 +35,13 @@ recall10_av , recall10_va = model_object()
 # visual_features = model_object.get_visual_features()
 # # kh
 
-# import json
-# file2 = open('/worktmp/khorrami/project_5/video/data/youcook2/youcookii_annotations_trainval.json','r')
-# text2 = json.load(file2)
-
 # import pickle5 as pickle
 # with open("", 'wb') as handle:
 #     pickle.dump(visual_features , handle,protocol=pickle.HIGHEST_PROTOCOL)
 
 import pickle5 as pickle   
-with open("/worktmp/khorrami/project_5/video/data/youcook2/output/yamnet-based/exp2/test_onsets", 'rb') as handle:
-    test = pickle.load(handle)
+with open("/worktmp/khorrami/project_5/video/features/ouput/youcook2/ann-based/errors/testing_image_errors", 'rb') as handle:
+    errors = pickle.load(handle)
  
 ################################################################## testing MMS
 # from keras import backend as K

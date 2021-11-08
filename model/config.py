@@ -1,23 +1,21 @@
 
-paths = {  
-  "split": "test",
-  "featuredir": "../../data/youcook2/output/",
+training_config = {  
+  "featuredir": "../../features/ouput/youcook2/",
   "featuretype": "ann-based",
-  "outputdir": "../../model/youcook2/"
+  "outputdir": "../../model/youcook2/current/",
+  "dataset": "YOUCOOK2",
+  "use_pretrained": False,
+  "save_results" : True,
+  "plot_results" : False
 }
 
-basic = {
-    "dataset": "YOUCOOK2",
-    "audio_model" : "yamnet",
-    "visual_model": "resnet152", 
-    "layer_name": "avg_pool",
-    "audiochannel" : "resDAVEnet",
-    "loss" : "MMS",
-    "save_results" : True,
-    "plot_results" : False
+model_config = { 
+    "audio_model_name" : "resDAVEnet",
+    "visual_model_name": "resnet152", 
+    "visual_layer_name": "avg_pool",
+    
+    "loss" : "MMS", 
+    "zeropadd_size" : 20
 }
 
-feature_settings = {
-  "audio_sample_rate": 16000,
-  "zeropadd": 30,
-}
+
