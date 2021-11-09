@@ -41,6 +41,7 @@ class Analysis:
         self.dict_errors = {}
         self.dict_yamnetoutput = {}
         self.dict_logmel40 = {}
+        self.dict_logmel64 = {}
         self.dict_embeddings_yamnet = {}
 
     def create_video_list (self ):
@@ -232,6 +233,9 @@ class Analysis:
     def update_logmel40_list (self, logmels):
         self.dict_logmel40[self.video_name] = logmels
         
+    def update_logmel64_list (self, logmel_yamnet):
+        self.dict_logmel64[self.video_name] = logmel_yamnet
+        
     def update_embedding_list (self, embeddings_yamnet):
         self.dict_embeddings_yamnet[self.video_name] = embeddings_yamnet
         
@@ -251,6 +255,11 @@ class Analysis:
         with open(output_name, 'wb') as handle:
             pickle.dump(self.dict_logmel40, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+    def save_logmel64 (self):
+        output_name =  self.outputdir + self.split + '_logmels64' 
+        with open(output_name, 'wb') as handle:
+            pickle.dump(self.dict_logmel64, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            
     def save_embeddings (self):
         output_name =  self.outputdir + self.split + '_embeddings' 
         with open(output_name, 'wb') as handle:
@@ -301,6 +310,7 @@ class Analysis:
                 self.update_embedding_list(embeddings_yamnet)
                 logmels = self.extract_logmel_features (wav_data)
                 self.update_logmel40_list(logmels)
+                self.update_logmel64_list(logmel_yamnet)
                 
                 accepted_logmel40 = [logmels[onset:onset + self.clip_length_logmel] for onset in onsets_logmel]     
                 accepted_logmel64 = [logmel_yamnet[onset:onset + self.clip_length_logmel] for onset in onsets_logmel]
@@ -315,6 +325,7 @@ class Analysis:
             
         self.save_yamnet_output()
         self.save_logmel40()
+        self.save_logmel64()
         self.save_embeddings()
         self.save_onsets()
         self.save_error_list() 

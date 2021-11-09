@@ -30,7 +30,7 @@ run_analysis = Analysis( audio_model,dataset, datadir,outputdir,split, yamnet_se
 run_analysis()
 
 # import pickle
-# with open("/worktmp2/hxkhkh/current/video/features/youcook2/yamnet-based/exp4/testing/1/af", 'rb') as handle:
+# with open("/worktmp/khorrami/project_5/video/features/youcook2/yamnet-based/training_logmels64", 'rb') as handle:
 #     b = pickle.load(handle)
 
 # import pickle
