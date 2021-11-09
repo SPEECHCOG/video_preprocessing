@@ -29,13 +29,13 @@ run_analysis = Analysis( audio_model,dataset, datadir,outputdir,split, yamnet_se
 
 run_analysis()
 
-import pickle
-with open("/worktmp/khorrami/project_5/video/data/youcook2/output/yamnet-based/exp3/test_onsets", 'rb') as handle:
-    b1 = pickle.load(handle)
+# import pickle
+# with open("/worktmp2/hxkhkh/current/video/features/youcook2/yamnet-based/exp4/testing/1/af", 'rb') as handle:
+#     b = pickle.load(handle)
 
-import pickle
-with open("/worktmp/khorrami/project_5/video/data/youcook2/output/yamnet-based/exp3/test/137/af", 'rb') as handle:
-    b2 = pickle.load(handle)
+# import pickle
+# with open("/worktmp/khorrami/project_5/video/data/youcook2/output/yamnet-based/exp3/test/137/af", 'rb') as handle:
+#     b2 = pickle.load(handle)
     
 # onsets1 = b1['onsets_second']
 # onsets2 = b2['onsets_second']

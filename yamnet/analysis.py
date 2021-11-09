@@ -41,23 +41,44 @@ class Analysis:
         self.dict_errors = {}
         self.dict_yamnetoutput = {}
         self.dict_logmel40 = {}
-        
+        self.dict_embeddings_yamnet = {}
+
     def create_video_list (self ):
         
-        video_dir = os.path.join(self.datadir, self.split)
-        video_list = os.listdir(video_dir)
+        video_dir = os.path.join(self.datadir, 'videos' , self.split) 
+        video_recepies = os.listdir(video_dir)
+        video_list = []
+        for rec in video_recepies:
+            files = os.listdir(os.path.join(video_dir, rec))
+            video_list.extend([os.path.join(self.split , rec ,f) for f in files])
         return video_list
     
     def load_video (self):
         
-        video_name = self.video_name
-        video_path = os.path.join(self.datadir,self.split, video_name) 
+        video_path = os.path.join(self.datadir, 'videos' , self.video_name) 
         target_sr = self.yamnet_settings ["target_sample_rate"]
         
         wav_data, sample_rate = librosa.load(video_path , sr=target_sr , mono=True)        
         duration = len(wav_data)/target_sr
         self.video_duration = duration
         return wav_data
+        
+    # def create_video_list (self ):
+        
+    #     video_dir = os.path.join(self.datadir, self.split)
+    #     video_list = os.listdir(video_dir)
+    #     return video_list
+    
+    # def load_video (self):
+        
+    #     video_name = self.video_name
+    #     video_path = os.path.join(self.datadir,self.split, video_name) 
+    #     target_sr = self.yamnet_settings ["target_sample_rate"]
+        
+    #     wav_data, sample_rate = librosa.load(video_path , sr=target_sr , mono=True)        
+    #     duration = len(wav_data)/target_sr
+    #     self.video_duration = duration
+    #     return wav_data
     
     def load_speech_segments (self):
         file_name = self.outputdir + self.split + '_yamnet_speech' 
@@ -211,6 +232,9 @@ class Analysis:
     def update_logmel40_list (self, logmels):
         self.dict_logmel40[self.video_name] = logmels
         
+    def update_embedding_list (self, embeddings_yamnet):
+        self.dict_embeddings_yamnet[self.video_name] = embeddings_yamnet
+        
     def update_onset_list (self, accepted_onsets_second):      
         self.dict_onsets[self.video_name] = {'onsets': accepted_onsets_second , 'folder_name':self.counter}        
 
@@ -223,9 +247,14 @@ class Analysis:
             pickle.dump(self.dict_yamnetoutput, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     def save_logmel40 (self):
-        output_name =  self.outputdir + self.split + '_logmels' 
+        output_name =  self.outputdir + self.split + '_logmels40' 
         with open(output_name, 'wb') as handle:
             pickle.dump(self.dict_logmel40, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def save_embeddings (self):
+        output_name =  self.outputdir + self.split + '_embeddings' 
+        with open(output_name, 'wb') as handle:
+            pickle.dump(self.dict_embeddings_yamnet, handle, protocol=pickle.HIGHEST_PROTOCOL)
             
     def save_onsets(self):
         output_name =  os.path.join(self.outputdir, self.exp_name , self.split + '_onsets')   
@@ -269,6 +298,7 @@ class Analysis:
     
                 speech_segments, embeddings_yamnet, logmel_yamnet = self.find_speech_segments(wav_data)
                 onsets_yamnet , onsets_second , onsets_logmel = self.produce_onset_candidates_2 (speech_segments)
+                self.update_embedding_list(embeddings_yamnet)
                 logmels = self.extract_logmel_features (wav_data)
                 self.update_logmel40_list(logmels)
                 
@@ -285,6 +315,7 @@ class Analysis:
             
         self.save_yamnet_output()
         self.save_logmel40()
+        self.save_embeddings()
         self.save_onsets()
         self.save_error_list() 
         
