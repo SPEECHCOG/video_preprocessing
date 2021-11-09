@@ -27,5 +27,5 @@ yamnet_settings = {
   "clip_length_seconds" : 10,
   "acceptance_snr" : 0.7,
   "skip_seconds" : 3,
-  "accepted_overlap_second": 0
+  "accepted_overlap_second": 5
 }
