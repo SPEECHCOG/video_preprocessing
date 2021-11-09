@@ -1,4 +1,5 @@
 from train_validate import Train_AVnet
+from inspection import Inspection
 #from features import Features
 ###############################################################################
 
@@ -23,10 +24,13 @@ training_config = cfg.training_config
 model_config = cfg.model_config
 ###############################################################################
 
-self = Train_AVnet(model_config , training_config)
-self()
+# train_object = Train_AVnet(model_config , training_config)
+# train_object()
 
+self = Inspection(model_config , training_config)
+dict_anns = self()
             
+
 
 #feature_object = Features(audiochannel, visual_model, layer_name, featuredir_train, featuredir_test, outputdir, split , feature_settings)
 # model_object.split = 'train'
@@ -36,13 +40,14 @@ self()
 # # kh
 
 # import pickle5 as pickle
-# with open("", 'wb') as handle:
-#     pickle.dump(visual_features , handle,protocol=pickle.HIGHEST_PROTOCOL)
+# with open("/worktmp2/hxkhkh/current/video/features/youcook2/ann-based/testing/0/af", 'rb') as handle:
+#     b = pickle.load(handle)
 
-import pickle5 as pickle   
-with open("/worktmp/khorrami/project_5/video/features/ouput/youcook2/ann-based/errors/testing_image_errors", 'rb') as handle:
-    errors = pickle.load(handle)
- 
+# import pickle5 as pickle   
+# with open("/worktmp/khorrami/project_5/video/features/ouput/youcook2/ann-based/errors/testing_image_errors", 'rb') as handle:
+#     errors = pickle.load(handle)
+
+
 ################################################################## testing MMS
 # from keras import backend as K
 # import tensorflow as tf

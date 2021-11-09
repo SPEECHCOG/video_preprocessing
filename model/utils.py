@@ -1,6 +1,5 @@
 
-#import pickle  # for video env
-import pickle5 as pickle # for myPython env
+
 import numpy
 import tensorflow as tf
 
@@ -74,18 +73,21 @@ def prepare_triplet_data (audio_features , visual_features):
 
 
 
-def prepare_data (audio_features , visual_features , loss):
+def prepare_data (audio_features , visual_features , loss, shuffle_data = False):
     if loss =='triplet':
         Ydata, Xdata, target = prepare_triplet_data (audio_features , visual_features)
     else:
-        
         n_samples = len(audio_features) 
-        random_order = numpy.random.permutation(int(n_samples))
-        
-        Ydata = visual_features[random_order ]
-        Xdata = audio_features[random_order ]
-     
         target = numpy.ones( n_samples)
+        if shuffle_data:           
+            random_order = numpy.random.permutation(int(n_samples)) 
+            Ydata = visual_features[random_order ]
+            Xdata = audio_features[random_order ]                    
+        else:
+            Ydata = visual_features
+            Xdata = audio_features     
+        
+            
     return Ydata, Xdata , target
 
 def calculate_recallat10( embedding_1,embedding_2, sampling_times, number_of_all_audios, pool):   

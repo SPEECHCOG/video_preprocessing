@@ -226,7 +226,7 @@ class Train_AVnet(AVnet):
         visual_features_train = self.get_visual_features()
         
         audio_features_train = self.get_audio_features()
-        Y,X,b = prepare_data (audio_features_train , visual_features_train  , self.loss)
+        Y,X,b = prepare_data (audio_features_train , visual_features_train  , self.loss,  shuffle_data = True)
         del audio_features_train, visual_features_train 
         history =  self.av_model.fit([Y,X], b, shuffle=True, epochs=5, batch_size=128)
         del X,Y
@@ -253,7 +253,7 @@ class Train_AVnet(AVnet):
         visual_features_test = self.get_visual_features()
         
         audio_features_test = self.get_audio_features() 
-        Ytest, Xtest, b_val = prepare_data (audio_features_test , visual_features_test , self.loss) 
+        Ytest, Xtest, b_val = prepare_data (audio_features_test , visual_features_test , self.loss,  shuffle_data = True) 
         del audio_features_test, visual_features_test                  
         self.valloss = self.av_model.evaluate([Ytest,Xtest], b_val, batch_size=128)
         

@@ -1,9 +1,3 @@
-import os
-#import pickle  # for video env
-import pickle5 as pickle # for myPython env
-import numpy
-from scipy.io import savemat
-from matplotlib import pyplot as plt
 
 from utils import triplet_loss,  mms_loss,  prepare_data, preparX, preparY, calculate_recallat10 
 
@@ -106,7 +100,7 @@ class AVnet():
         out_audio_channel = pool5
         out_audio_channel = Reshape([pool5.shape[2]],name='reshape_audio')(out_audio_channel) 
         audio_model = Model(inputs= audio_sequence, outputs = out_audio_channel )
-        audio_model.summary()
+        #audio_model.summary()
         return audio_sequence , out_audio_channel , audio_model
 
     def build_resDAVEnet (self, Xshape):     
@@ -188,7 +182,7 @@ class AVnet():
         out_audio_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_audio')(out_audio_channel)
         
         audio_model = Model(inputs= audio_sequence, outputs = out_audio_channel )
-        audio_model.summary()
+        #audio_model.summary()
         return audio_sequence , out_audio_channel , audio_model   
      
     def build_visual_model (self, Yshape):
@@ -230,7 +224,7 @@ class AVnet():
         out_visual_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_visual')(out_visual_channel)
         
         visual_model = Model(inputs= visual_sequence, outputs = out_visual_channel )
-        visual_model.summary()
+        #visual_model.summary()
         return visual_sequence , out_visual_channel , visual_model
 
      
@@ -247,12 +241,12 @@ class AVnet():
         A = out_audio_channel
         
         gate_size = 4096
-        gatedV_1 = Dense(gate_size)(V)
-        gatedV_2 = Dense(gate_size,activation = 'sigmoid')(gatedV_1)        
+        gatedV_1 = Dense(gate_size, name = "v1")(V)
+        gatedV_2 = Dense(gate_size,activation = 'sigmoid', name = "v2")(gatedV_1)        
         gatedV = Multiply(name= 'multiplyV')([gatedV_1, gatedV_2])
 
-        gatedA_1 = Dense(gate_size)(A)
-        gatedA_2 = Dense(gate_size,activation = 'sigmoid')(gatedA_1)        
+        gatedA_1 = Dense(gate_size, name = "a1")(A)
+        gatedA_2 = Dense(gate_size,activation = 'sigmoid', name = "a2")(gatedA_1)        
         gatedA = Multiply(name= 'multiplyA')([gatedA_1, gatedA_2])
         
         visual_embedding_model = Model(inputs=visual_sequence, outputs = gatedV, name='visual_embedding_model')
@@ -269,7 +263,7 @@ class AVnet():
             final_model = Model(inputs=[visual_sequence, audio_sequence], outputs = s_output )
             final_model.compile(loss=mms_loss, optimizer= Adam(lr=1e-03))
     
-        final_model.summary()
+        #final_model.summary()
     
         return visual_embedding_model,audio_embedding_model,final_model
 

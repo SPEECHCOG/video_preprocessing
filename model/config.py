@@ -1,8 +1,8 @@
 
 training_config = {  
-  "featuredir": "../../features/ouput/youcook2/",
+  "featuredir": "../../features/youcook2/",
   "featuretype": "ann-based",
-  "outputdir": "../../model/youcook2/current/",
+  "outputdir": "../../model/youcook2/benchmark_20/",
   "dataset": "YOUCOOK2",
   "use_pretrained": False,
   "save_results" : True,
