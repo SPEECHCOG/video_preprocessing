@@ -78,8 +78,8 @@ test_image_array = image.img_to_array(test_image_original)
 
 #%%
 
-visual_model_names = ["vgg16", "resnet152" , "Xception"]
-layer_names = ['block5_pool', 'conv5_block3_out', 'block14_sepconv2_act']
+visual_model_names = ["vgg16", "resnet152" , "Xception", "AVnet"]
+layer_names = ['block5_pool', 'conv5_block3_out', 'block14_sepconv2_act', '']
 
 n = 2
 visual_model_name =  visual_model_names[n]
