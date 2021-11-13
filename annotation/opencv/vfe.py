@@ -1,18 +1,16 @@
 import os
 import numpy
 import cv2 as cv
-from tensorflow.keras.preprocessing import image
 import pickle
 
+from tensorflow.keras.preprocessing import image
 from tensorflow.keras.models import Model
-
 
 from tensorflow.keras.applications.vgg16 import VGG16
 from tensorflow.keras.applications.vgg16 import preprocess_input as preprocess_input_vgg
 
 from tensorflow.keras.applications import ResNet152
 from tensorflow.keras.applications.resnet import preprocess_input as processing_input_resnet
-
 
 from tensorflow.keras.applications import Xception
 from tensorflow.keras.applications.xception import preprocess_input as processing_input_xception
@@ -76,13 +74,13 @@ class VisualFeatureExtractor:
         return   features_out_reshaped     
 
           
-    def save_per_video (self, accepted_onsets_second ,  vgg_video):
+    def save_per_video (self, accepted_onsets_second ,  vfs_video):
         output_path = os.path.join(self.outputdir , self.split ,  str(self.folder_name))
         output_name = output_path + "/vf_" + self.visual_model_name                
         dict_out = {}
         dict_out['video_name'] = self.video_name
         dict_out['onsets_second'] = accepted_onsets_second
-        dict_out[self.visual_model_name + '_' + self.layer_name] =  vgg_video
+        dict_out[self.visual_model_name + '_' + self.layer_name] =  vfs_video
                    
         with open(output_name, 'wb') as handle:
             pickle.dump(dict_out, handle, protocol=pickle.HIGHEST_PROTOCOL)
