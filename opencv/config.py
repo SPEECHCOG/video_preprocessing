@@ -2,17 +2,16 @@
 
 paths = {  
   "split": "val",
-  "datadir": "/tuni/groups/3101050_Specog/corpora/youcook2_dataset",
-  "outputdir": "../../data/youcook2/output/"
+  "datadir": "/run/media/hxkhkh/b756dee3-de7e-4cdd-883b-ac95a8d00407/video/youcook2",
+  "outputdir": "../../../features/youcook2/yamnet-based/",
+  "exp_name" : "exp4"
 }
 
 basic = {
-    "dataset": "YOUCOOK2",
-    "audio_model" : "yamnet",
-    "visual_model": "resnet152", 
-    "layer_name": "avg_pool",
-    "save_results" : True,
-    "plot_results" : False
+    "visual_model_name": "resnet152", 
+    "visual_layer_name": "avg_pool",
+    "save_images" : True,
+    "save_visual_features" : False
 }
 
 video_settings = {

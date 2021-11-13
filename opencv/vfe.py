@@ -15,9 +15,8 @@ from tensorflow.keras.applications.resnet import preprocess_input as processing_
 
 class VisualFeatureExtractor:
     
-    def __init__(self,visual_model, layer_name, dataset, datadir, outputdir, split , video_settings):
-        
-        self.visual_model = visual_model
+    def __init__(self,visual_model_name, visual_layer_name, dataset, datadir, outputdir, split , video_settings):
+
         self.dataset = dataset
         self.datadir = datadir
         self.outputdir = outputdir
@@ -25,8 +24,8 @@ class VisualFeatureExtractor:
         
         self.video_settings = video_settings       
         self.clip_length_seconds = self.video_settings ["clip_length_seconds"]
-        self.visual_model = visual_model
-        self.layer_name = layer_name
+        self.visual_model_name = visual_model_name
+        self.visual_layer_name = visual_layer_name
          
         self.video_name = ""
         #self.output_subpath = ""    
@@ -128,8 +127,7 @@ class VisualFeatureExtractor:
                     all_vfs_per_onset.append(vf_image)
                     
                 vf_video.append(numpy.array(all_vfs_per_onset)) 
-             
-             
+
             self.save_per_video ( accepted_onsets_second ,  vf_video)
             # try:                          
             # except:

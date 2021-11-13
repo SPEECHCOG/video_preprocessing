@@ -14,27 +14,28 @@ import config as cfg
 split = cfg.paths['split']
 datadir = cfg.paths['datadir']
 outputdir = cfg.paths['outputdir']
+exp_name = cfg.paths['exp_name']
 
-audio_model = cfg.basic['audio_model']
-visual_model = cfg.basic['visual_model']
 
-layer_name = cfg.basic['layer_name']
+visual_model_name = cfg.basic['visual_model_name']
+visual_layer_name = cfg.basic['visual_layer_name']
+save_images = cfg.basic['save_images']
+save_visual_features = cfg.basic['save_visual_features']
 
-dataset = cfg.basic['dataset']
 video_settings = cfg.video_settings
 
 ###############################################################################
 
-# from analysis import Analysis
+from analysis import Analysis
 
-# run_analysis = Analysis( audio_model,dataset, datadir,outputdir,split, video_settings )
-# run_analysis()
+run_analysis = Analysis( visual_model_name, visual_layer_name , save_images, save_visual_features, datadir, outputdir, exp_name, split,  video_settings )
+run_analysis()
 
 
-from vfe import VisualFeatureExtractor
+# from vfe import VisualFeatureExtractor
 
-visual_feature_extractor = VisualFeatureExtractor( visual_model,layer_name , dataset, datadir,outputdir, split, video_settings )
-visual_feature_extractor()
+# visual_feature_extractor = VisualFeatureExtractor( visual_model_name, visual_layer_name , datadir, outputdir, split, exp_name, video_settings )
+# visual_feature_extractor()
 
 
 # import pickle
