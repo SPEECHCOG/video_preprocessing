@@ -44,5 +44,5 @@ run_analysis()
     
 # # run_analysis.split
 # import pickle
-# with open("/worktmp2/hxkhkh/current/video/features/youcook2/yamnet-based/exp4/testing/4/vf_resnet152", 'rb') as handle:
+# with open("/worktmp2/hxkhkh/current/video/features/youcook2/yamnet-based/exp4/testing/1/vf_resnet152", 'rb') as handle:
 #     c = pickle.load(handle)
