@@ -34,7 +34,6 @@ class Analysis:
         
         self.clip_length_seconds = self.video_settings ["clip_length_seconds"]
         
-        self.folder_counter = 0
         self.video_name = ""
         self.video_duration = 0
         self.output_subpath = ""
@@ -104,25 +103,24 @@ class Analysis:
         features_out_reshaped = numpy.squeeze(features_out)
         return   features_out_reshaped     
 
-          
-    def save_per_video (self, accepted_onsets_second ,  vgg_video):
-        output_path = os.path.join(self.outputdir , self.split ,  str(self.folder_name))
+         
+
+    def save_per_video (self,  vfs_video):
+        output_path = os.path.join(self.outputdir , self.exp_name , self.split ,  str(self.folder_name))
         output_name = output_path + "/vf_" + self.visual_model_name                
         dict_out = {}
         dict_out['video_name'] = self.video_name
-        dict_out['onsets_second'] = accepted_onsets_second
-        dict_out[self.visual_model_name + '_' + self.layer_name] =  vgg_video
+        dict_out['onsets_second'] = self.accepted_onsets_second
+        dict_out[self.visual_model_name + '_' + self.visual_layer_name] =  vfs_video
                    
         with open(output_name, 'wb') as handle:
-            pickle.dump(dict_out, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-
+            pickle.dump(dict_out, handle, protocol=pickle.HIGHEST_PROTOCOL)        
         
-    def find_video_features(self, cap, accepted_onsets_second): 
-         output_path = os.path.join(self.outputdir , self.split ,  str(self.folder_counter) , "images")
-         os.makedirs(output_path, exist_ok= True)
+    def find_video_features(self, cap): 
+         # output_path = os.path.join(self.outputdir ,  self.exp_name, self.split ,  str(self.folder_name) , "images")
+         # os.makedirs(output_path, exist_ok= True)
          vf_video =  []
-         for counter_onset, onset in enumerate(accepted_onsets_second):
+         for counter_onset, onset in enumerate(self.accepted_onsets_second):
             all_vfs_per_onset = []
             for i in range(self.clip_length_seconds):
                 ms =  (onset + i ) * 1000
@@ -136,12 +134,12 @@ class Analysis:
             vf_video.append(all_vfs_per_onset)       
          return vf_video
      
-    def write_clip_images (self, cap , accepted_onsets_second):
+    def write_clip_images (self, cap ):
         
-        output_path = os.path.join(self.outputdir , self.split ,  str(self.folder_counter) , "images")
+        output_path = os.path.join(self.outputdir ,  self.exp_name, self.split ,  str(self.folder_name) , "images")
         os.makedirs(output_path, exist_ok= True)      
         
-        for counter_onset, onset in enumerate(accepted_onsets_second):
+        for counter_onset, onset in enumerate(self.accepted_onsets_second):
             
             self.output_subpath = os.path.join(output_path, str(counter_onset))
             os.makedirs(self.output_subpath, exist_ok= True)
@@ -165,31 +163,23 @@ class Analysis:
     def update_error_list (self):       
         self.dict_errors[self.counter] = self.video_name       
 
-    def save_per_video (self, accepted_onsets_second ,  vfs_video):
-        output_path = os.path.join(self.outputdir , self.exp_name , self.split ,  str(self.folder_name))
-        output_name = output_path + "/vf_" + self.visual_model_name                
-        dict_out = {}
-        dict_out['video_name'] = self.video_name
-        dict_out['onsets_second'] = accepted_onsets_second
-        dict_out[self.visual_model_name + '_' + self.layer_name] =  vfs_video
-                   
-        with open(output_name, 'wb') as handle:
-            pickle.dump(dict_out, handle, protocol=pickle.HIGHEST_PROTOCOL)          
+  
         
     def to_save_visual_features(self):
         base_model = self.load_model()      
-        self.visual_model = Model(inputs=base_model.input,outputs=base_model.get_layer(self.layer_name).output)
-        dict_onsets = self.load_dict_onsets ()
-        self.counter = 0
+        self.visual_model = Model(inputs=base_model.input,outputs=base_model.get_layer(self.visual_layer_name).output)
         
+        dict_onsets = self.load_dict_onsets ()
+        self.counter = 0        
         for video_name, value in dict_onsets.items(): 
             self.video_name = video_name
             self.folder_name = value['folder_name']
-            accepted_onsets_second = value['onsets']
+            self.accepted_onsets_second = value['onsets']
+            
             cap = self.load_video ()
-            vf_video = self.find_video_features(cap, accepted_onsets_second)
-            self.counter += 1       
-            self.save_per_video( accepted_onsets_second ,  vf_video)
+            vf_video = self.find_video_features(cap,)
+            self.save_per_video(vf_video)
+            self.counter += 1
             
             
     def to_save_images (self):
@@ -199,24 +189,33 @@ class Analysis:
         for video_name, value in dict_onsets.items():      
             print(self.counter)
             self.video_name = video_name
-            self.folder_counter = value['folder_name']
-            accepted_onsets_second = value['onsets']
-            
+            self.folder_name = value['folder_name']
+            self.accepted_onsets_second = value['onsets']            
             cap = self.load_video ()
-            self.write_clip_images(cap, accepted_onsets_second)
-            # try:           
-                
-            # except:
-            #     self.update_error_list()
+            
+            self.write_clip_images(cap)
             self.counter += 1
             
             
-        def __cal__ ( self):
-            if self.save_images:
-                self.to_save_images()
+    def __call__ ( self):
+        
+        if self.save_visual_features:
+            base_model = self.load_model()      
+            self.visual_model = Model(inputs=base_model.input,outputs=base_model.get_layer(self.visual_layer_name).output)
+        
+        dict_onsets = self.load_dict_onsets ()
+        self.counter = 0        
+        for video_name, value in dict_onsets.items(): 
+            self.video_name = video_name
+            self.folder_name = value['folder_name']
+            self.accepted_onsets_second = value['onsets']            
+            cap = self.load_video ()
             if self.save_visual_features:
-                self.to_save_visual_features()
+                vf_video = self.find_video_features(cap)
+                self.save_per_video( vf_video)
+            if self.save_images:
+                self.write_clip_images(cap)
+                
+            self.counter += 1 
+            print(self.folder_name)
 
-        # output_name =  self.outputdir + self.split + '_image_errors'  
-        # with open(output_name , 'wb') as handle:
-        #     pickle.dump(self.dict_errors, handle, protocol=pickle.HIGHEST_PROTOCOL)
