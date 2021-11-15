@@ -63,23 +63,6 @@ class Analysis:
         duration = len(wav_data)/target_sr
         self.video_duration = duration
         return wav_data
-        
-    # def create_video_list (self ):
-        
-    #     video_dir = os.path.join(self.datadir, self.split)
-    #     video_list = os.listdir(video_dir)
-    #     return video_list
-    
-    # def load_video (self):
-        
-    #     video_name = self.video_name
-    #     video_path = os.path.join(self.datadir,self.split, video_name) 
-    #     target_sr = self.yamnet_settings ["target_sample_rate"]
-        
-    #     wav_data, sample_rate = librosa.load(video_path , sr=target_sr , mono=True)        
-    #     duration = len(wav_data)/target_sr
-    #     self.video_duration = duration
-    #     return wav_data
     
     def load_speech_segments (self):
         file_name = self.outputdir + self.split + '_yamnet_speech' 
@@ -302,24 +285,28 @@ class Analysis:
         for video_name in video_list:         
             self.video_name = video_name
             # do all analysis
-            try:
-                wav_data = self.load_video ()
-    
-                speech_segments, embeddings_yamnet, logmel_yamnet = self.find_speech_segments(wav_data)
-                onsets_yamnet , onsets_second , onsets_logmel = self.produce_onset_candidates_2 (speech_segments)
-                self.update_embedding_list(embeddings_yamnet)
-                logmels = self.extract_logmel_features (wav_data)
-                self.update_logmel40_list(logmels)
-                self.update_logmel64_list(logmel_yamnet)
+            #try:
+            wav_data = self.load_video ()
+            logmels = self.extract_logmel_features (wav_data)
+
+            speech_segments, embeddings_yamnet, logmel_yamnet = self.find_speech_segments(wav_data)
+            
+            
+            self.update_logmel40_list(logmels)
+            self.update_logmel64_list(logmel_yamnet)
+            self.update_embedding_list(embeddings_yamnet)
+            
+            onsets_yamnet , onsets_second , onsets_logmel = self.produce_onset_candidates_2 (speech_segments)
+            self.update_onset_list (onsets_second)
+            
+            accepted_logmel40 = [logmels[onset:onset + self.clip_length_logmel] for onset in onsets_logmel]     
+            accepted_logmel64 = [logmel_yamnet[onset:onset + self.clip_length_logmel] for onset in onsets_logmel]
+            accepted_embeddings = [embeddings_yamnet[onset:onset + self.clip_length_yamnet] for onset in onsets_yamnet]
+            
+            self.save_per_video (onsets_second , onsets_logmel, accepted_logmel40, accepted_logmel64,accepted_embeddings )
                 
-                accepted_logmel40 = [logmels[onset:onset + self.clip_length_logmel] for onset in onsets_logmel]     
-                accepted_logmel64 = [logmel_yamnet[onset:onset + self.clip_length_logmel] for onset in onsets_logmel]
-                accepted_embeddings = [embeddings_yamnet[onset:onset + self.clip_length_yamnet] for onset in onsets_yamnet]
-                self.update_onset_list (onsets_second)
-                self.save_per_video (onsets_second , onsets_logmel, accepted_logmel40, accepted_logmel64,accepted_embeddings )
-                
-            except:
-                self.update_error_list()
+            # except:
+            #     self.update_error_list()
                 
             self.counter += 1 
             
