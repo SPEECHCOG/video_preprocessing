@@ -79,11 +79,12 @@ class Analysis:
 
     
     def extract_logmel_features (self, wav_data):
-        
+        #print('...now it is extracting logmels step 1...........')
         window_len_in_ms = self.yamnet_settings ['win_length_logmel']
         window_hop_in_ms = self.yamnet_settings ['win_hope_logmel']
         number_of_mel_bands = self.yamnet_settings ['logmel_bands']
         sr_target = self.yamnet_settings ['target_sample_rate' ]
+        #print('...now it is extracting logmels step 2...........')
         logmels = utils.calculate_logmels (wav_data , number_of_mel_bands , window_len_in_ms , window_hop_in_ms , sr_target)        
         return logmels
 
@@ -144,16 +145,19 @@ class Analysis:
                 onsets_yamnet.append(onset_candidate)  
             if len(onsets_yamnet) >= number_of_clips:
                 break
+
+         
+        onsets_second = [math.floor(item * self.win_hope_yamnet) for item in onsets_yamnet]
+        onsets_logmel = [math.floor(item / self.win_hope_logmel) for item in onsets_second]
         
+                
         print('###############################################################')        
         print(self.counter)
         print(self.video_name)
         print(self.video_duration)
         print(speech_segments)       
         print('###############################################################')
-         
-        onsets_second = [math.floor(item * self.win_hope_yamnet) for item in onsets_yamnet]
-        onsets_logmel = [math.floor(item / self.win_hope_logmel) for item in onsets_second]
+        
         return onsets_yamnet , onsets_second , onsets_logmel 
 
     def produce_onset_candidates_2 (self, speech_segments):
@@ -282,29 +286,39 @@ class Analysis:
     def to_run_speech_detection(self):
         video_list = self.create_video_list()
         self.model = hub.load('https://tfhub.dev/google/yamnet/1')
-        for video_name in video_list:         
+        for video_name in video_list:
+                       
             self.video_name = video_name
+            # print(self.counter)
+            # print(self.video_name)
+            # print('........step 0 is done ...........' )                
             # do all analysis
             #try:
             wav_data = self.load_video ()
+            #print('........vide is loaded ...........' )  
             logmels = self.extract_logmel_features (wav_data)
-
+            #print('........logmels are extracted ...........' )  
             speech_segments, embeddings_yamnet, logmel_yamnet = self.find_speech_segments(wav_data)
-            
-            
+            print(self.counter)
+            print(self.video_name)
+            print('........step 1 is done ...........' )
             self.update_logmel40_list(logmels)
             self.update_logmel64_list(logmel_yamnet)
             self.update_embedding_list(embeddings_yamnet)
             
             onsets_yamnet , onsets_second , onsets_logmel = self.produce_onset_candidates_2 (speech_segments)
             self.update_onset_list (onsets_second)
-            
+            print(self.counter)
+            print(self.video_name)
+            print('........step 2 is done ...........' )
             accepted_logmel40 = [logmels[onset:onset + self.clip_length_logmel] for onset in onsets_logmel]     
             accepted_logmel64 = [logmel_yamnet[onset:onset + self.clip_length_logmel] for onset in onsets_logmel]
             accepted_embeddings = [embeddings_yamnet[onset:onset + self.clip_length_yamnet] for onset in onsets_yamnet]
             
             self.save_per_video (onsets_second , onsets_logmel, accepted_logmel40, accepted_logmel64,accepted_embeddings )
-                
+            print(self.counter)
+            print(self.video_name)
+            print('........step 3 is done ...........' )    
             # except:
             #     self.update_error_list()
                 
@@ -342,8 +356,8 @@ class Analysis:
                 accepted_logmel40 = [logmels[onset:onset + self.clip_length_logmel] for onset in onsets_logmel] 
                 accepted_logmel64 = []
                 accepted_embeddings = []
-                self.update_onset_list (onsets_second)
-                self.save_per_video (onsets_second , onsets_logmel, accepted_logmel40, accepted_logmel64, accepted_embeddings )
+                self.update_onset_list(onsets_second)
+                self.save_per_video(onsets_second , onsets_logmel, accepted_logmel40, accepted_logmel64, accepted_embeddings )
                 
             except:
                 self.update_error_list()

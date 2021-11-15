@@ -90,7 +90,7 @@ def calculate_logmels (y , number_of_mel_bands , window_len_in_ms , window_hop_i
     win_hop_sample = int (sr_target * window_hop_in_ms)
       
     mel_feature = librosa.feature.melspectrogram(y=y, sr=sr_target, n_fft=win_len_sample, hop_length=win_hop_sample, n_mels=number_of_mel_bands,power=2.0)
-    
+    #print('.......... mel features are found ..............')
     zeros_mel = mel_feature[mel_feature==0]          
     if numpy.size(zeros_mel)!= 0:
         
@@ -103,5 +103,7 @@ def calculate_logmels (y , number_of_mel_bands , window_len_in_ms , window_hop_i
             min_mel = 1e-12 
            
         mel_feature[mel_feature==0] = min_mel           
-    logmel_feature = numpy.transpose(10*numpy.log10(mel_feature))       
+    logmel_feature = numpy.transpose(10*numpy.log10(mel_feature)) 
+    #print('..........log mel features are found ..............')  
+    #print (numpy.shape(logmel_feature))    
     return logmel_feature
