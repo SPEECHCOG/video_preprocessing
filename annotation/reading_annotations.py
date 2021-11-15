@@ -9,9 +9,15 @@ split = 'validation'
 
 #........................................................... reading json files
 
-datadir = "/run/media/hxkhkh/b756dee3-de7e-4cdd-883b-ac95a8d00407/video/youcook2"
-test_ann_file = "/run/media/hxkhkh/b756dee3-de7e-4cdd-883b-ac95a8d00407/video/youcook2/annotations/youcookii_annotations_test_segments_only.json"
-train_ann_file = "/run/media/hxkhkh/b756dee3-de7e-4cdd-883b-ac95a8d00407/video/youcook2/annotations/youcookii_annotations_trainval.json"
+# datadir = "/run/media/hxkhkh/b756dee3-de7e-4cdd-883b-ac95a8d00407/video/youcook2"
+# test_ann_file = "/run/media/hxkhkh/b756dee3-de7e-4cdd-883b-ac95a8d00407/video/youcook2/annotations/youcookii_annotations_test_segments_only.json"
+# train_ann_file = "/run/media/hxkhkh/b756dee3-de7e-4cdd-883b-ac95a8d00407/video/youcook2/annotations/youcookii_annotations_trainval.json"
+
+
+datadir = "../../data/youcook2"
+test_ann_file = "../../data/youcook2/annotations/youcookii_annotations_test_segments_only.json"
+train_ann_file = "../../data/youcook2/annotations/youcookii_annotations_trainval.json"
+
 
 with open(train_ann_file) as handle:
     annotations_trainval = json.load(handle) 
@@ -20,9 +26,9 @@ with open(test_ann_file) as handle:
     annotations_test = json.load(handle) 
 
 if split == 'training' or split== 'validation':
-    database = annotations_trainval['database']
+    database_anns = annotations_trainval['database']
 else:
-    database = annotations_test['database']
+    database_anns = annotations_test['database']
     
 #.......................................................... listing video names
     
@@ -56,10 +62,10 @@ all_sentences = []
 all_clip_durations = 0
 counter_video = 0
 all_info = {}
-for video in video_list:
-    video_name = video.split('/')[-1]
-    name = video_name.split('.')[0]
-    info = database[name] 
+for video_fullname in video_list:
+    video_name = video_fullname.split('/')[-1]
+    vid_name = video_name.split('.')[0]
+    info = database_anns[vid_name] 
     duration = info['duration']
     anns = info['annotations']
     id_counts = len(anns)
@@ -76,8 +82,8 @@ for video in video_list:
     all_id_counts.append(id_counts)
     all_sentences.append(video_sentences)
     video_info = {}
-    video_info['video_full_name'] = video
-    video_info['video_name'] = name
+    video_info['video_full_name'] = video_fullname
+    video_info['video_name'] = vid_name
     video_info['id_counts'] = id_counts
     video_info['sentences'] = video_sentences
     all_info [counter_video] = video_info
