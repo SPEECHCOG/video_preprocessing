@@ -1,7 +1,7 @@
 
 
 paths = {  
-  "split": "validation",
+  "split": "training",
   "datadir": "/run/media/hxkhkh/b756dee3-de7e-4cdd-883b-ac95a8d00407/video/youcook2", #"/worktmp2/hxkhkh/current/video/data/youcook2",
   "outputdir": "../../features/youcook2/yamnet-based/",
   "exp_name" : "exp4",
@@ -10,7 +10,7 @@ paths = {
 basic = {
     "visual_model_name": "resnet152", 
     "visual_layer_name": "avg_pool",
-    "save_images" : True,
+    "save_images" : False,
     "save_visual_features" : True,
 }
 
