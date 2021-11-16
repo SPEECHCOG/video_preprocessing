@@ -4,7 +4,7 @@
 import tensorflow as tf
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = False
-config.gpu_options.per_process_gpu_memory_fraction=0.7
+config.gpu_options.per_process_gpu_memory_fraction = 0.5
 sess = tf.compat.v1.Session(config=config)
 
 ###############################################################################
@@ -29,9 +29,9 @@ run_analysis = Analysis( audio_model,dataset, datadir,outputdir,split, yamnet_se
 
 run_analysis()
 
-# import pickle
-# with open("/worktmp/khorrami/project_5/video/features/youcook2/yamnet-based/exp4/training_onsets", 'rb') as handle:
-#     b = pickle.load(handle)
+import pickle
+with open("/worktmp2/hxkhkh/current/video/features/youcook2/ann-based/errors/training_errors", 'rb') as handle:
+    b = pickle.load(handle)
 
 # import pickle
 # with open("/worktmp/khorrami/project_5/video/data/youcook2/output/yamnet-based/exp3/test/137/af", 'rb') as handle:

@@ -91,8 +91,7 @@ class Analysis:
 
     
     def execute_yamnet (self, wavedata ): 
-        
-        
+  
         scores, embeddings, log_mel_yamnet = self.model(wavedata)       
         scores_np = scores.numpy()
         logmel_yamnet_np = log_mel_yamnet.numpy()
@@ -299,8 +298,7 @@ class Analysis:
             logmels = self.extract_logmel_features (wav_data)
             #print('........logmels are extracted ...........' )  
             speech_segments, embeddings_yamnet, logmel_yamnet = self.find_speech_segments(wav_data)
-            print(self.counter)
-            print(self.video_name)
+
             print('........step 1 is done ...........' )
             self.update_logmel40_list(logmels)
             self.update_logmel64_list(logmel_yamnet)
@@ -308,28 +306,28 @@ class Analysis:
             
             onsets_yamnet , onsets_second , onsets_logmel = self.produce_onset_candidates_2 (speech_segments)
             self.update_onset_list (onsets_second)
-            print(self.counter)
-            print(self.video_name)
+  
             print('........step 2 is done ...........' )
             accepted_logmel40 = [logmels[onset:onset + self.clip_length_logmel] for onset in onsets_logmel]     
             accepted_logmel64 = [logmel_yamnet[onset:onset + self.clip_length_logmel] for onset in onsets_logmel]
             accepted_embeddings = [embeddings_yamnet[onset:onset + self.clip_length_yamnet] for onset in onsets_yamnet]
             
             self.save_per_video (onsets_second , onsets_logmel, accepted_logmel40, accepted_logmel64,accepted_embeddings )
-            print(self.counter)
-            print(self.video_name)
+            
             print('........step 3 is done ...........' )    
             # except:
             #     self.update_error_list()
                 
             self.counter += 1 
-            
+        
+        self.save_onsets()
+        self.save_error_list()
         self.save_yamnet_output()
         self.save_logmel40()
         self.save_logmel64()
         self.save_embeddings()
-        self.save_onsets()
-        self.save_error_list() 
+        
+         
         
     def run_from_file (self):
         
