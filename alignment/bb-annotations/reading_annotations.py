@@ -39,6 +39,7 @@ datadir = "../../../data/youcook2"
 test_ann_file = "../../../data/youcook2/annotations/youcookii_annotations_test_segments_only.json"
 train_ann_file = "../../../data/youcook2/annotations/youcookii_annotations_trainval.json"
 
+outputdir = "../../../data/youcook2/annotations/"
 
 with open(train_ann_file) as handle:
     annotations_trainval = json.load(handle) 
@@ -80,16 +81,18 @@ all_sentences = []
 all_clip_durations = 0
 counter_video = 0
 all_info = {}
+
 for video_fullname in video_list:
     video_name = video_fullname.split('/')[-1]
     vid_name = video_name.split('.')[0]
     video_info = {}
-    video_info ['video_fullname'] = video_fullname
+    video_info ['vid_name'] = vid_name
     
     info_anns = {}
     info_bbx = {}
     try:
         info_anns = database_anns[vid_name]
+        
         
     except:
         print('... in video ' + video_fullname + ' annotation is missed ... ')
@@ -105,7 +108,7 @@ for video_fullname in video_list:
         
 
     
-    all_info[vid_name] = video_info
+    all_info[video_fullname] = video_info
     # duration = info_anns['duration']
     # anns = info_anns['annotations']
     # id_counts = len(anns)
@@ -129,7 +132,58 @@ for video_fullname in video_list:
     # all_info [counter_video] = video_info
     # counter_video +=1
     
+counter_clip = 0
+clips = {}    
+for video_fullname, value in all_info.items():
+    print(video_fullname)
+    info_anns = value['info_anns']
+    info_bbx = value['info_bbx']    
+    annotations = info_anns['annotations']
+    for item_ann in annotations:       
+        clip_info = {}
+        #using segment as key because it's shared between two annotations       
+        clip_info['video_fullname'] = video_fullname 
+        clip_info['sentence'] = item_ann['sentence']
+        clip_info ['segment'] = item_ann['segment']       
+        clips[counter_clip] = clip_info
+        counter_clip += 1
     
     
+counter_clip = 0
+clips_bbx = {}    
+for video_fullname, value in all_info.items():
+    print(video_fullname)
+    info_anns = value['info_anns']
+    info_bbx = value['info_bbx']
+    annotations = info_anns['annotations']
     
+    try:
+        annotations_bbx = info_bbx['segments']
+        for item_bbx, value_bbx in annotations_bbx.items():           
+            clip_info = {}           
+            clip_info['video_fullname'] = video_fullname 
+            object_list = []
+            object_boxes = []
+            for item_object in value_bbx['objects']:
+                object_list.append(item_object['label'])
+                object_boxes.append(item_object['boxes'])           
+            clip_info['objects'] = object_list
+            clip_info['objects-bbx'] = object_boxes
+            clip_info ['segment'] = value_bbx['segment']           
+            clips_bbx[counter_clip] = clip_info
+            for item_ann in annotations:
+                segment = item_ann['segment']
+                if segment == value_bbx['segment']:
+                    clip_info ['annotation'] = item_ann
+            
+            counter_clip += 1    
     
+    except:
+        pass
+
+import pickle
+with open(outputdir + split + '_clips_bbx' , 'wb') as handle:
+     pickle.dump(clips_bbx, handle)
+     
+with open(outputdir + split + '_clips', 'wb') as handle:
+     pickle.dump(clips, handle)
