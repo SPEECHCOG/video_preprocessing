@@ -41,7 +41,7 @@ class Train_AVnet(AVnet):
         self.valloss = 1000
         self.trainloss_all = []
         self.valloss_all = []
-        self.errorclips = []
+        self.errorclips = {}
         
         
     def initialize_model_outputs(self):
@@ -156,8 +156,44 @@ class Train_AVnet(AVnet):
     
     def update_error_list (self):
         self.dict_errors[self.video_name] = self.folder_name
-          
-    
+
+
+    def find_error_clips(self):  
+        self.errorclips = {}         
+        # inspect audio clips
+        counter_clip = 0
+        for video_name, value in self.dict_onsets.items():           
+            self.video_name = video_name
+            self.folder_name = value['folder_name']                   
+            self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name))      
+            af = self.load_af()            
+            logmel_all = af['logmel40'] 
+            for clip_logmel in logmel_all:            
+                if clip_logmel.shape[0] != self.clip_length * 100:
+                    #self.errorclips[counter_clip] = {}
+                    self.errorclips[counter_clip] = 'a'
+                counter_clip += 1
+                
+        #inspect visual clips       
+        counter_clip = 0
+        for video_name, value in self.dict_onsets.items():           
+            self.video_name = video_name
+            self.folder_name = value['folder_name'] 
+            self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name)) 
+            vf = self.load_vf()
+            # resnet features for each onset (10*2048)
+            # now by mistake it is saved as list of n onsets
+            resnet_all = vf['resnet152_avg_pool']           
+            for clip_resnet in resnet_all:                
+                if len(clip_resnet) != self.clip_length:
+                    self.errorclips[counter_clip] = 'v'
+                    # if counter_clip in self.errorclips:
+                    #     self.errorclips[counter_clip]['v'] = 1
+                    # else:
+                    #     self.errorclips[counter_clip] = {}
+                    #     self.errorclips[counter_clip]['v'] = 1
+                counter_clip += 1 
+        
     def get_audio_features (self):
         
         af_all = [] 
@@ -165,27 +201,25 @@ class Train_AVnet(AVnet):
         counter_clip = 0
         for video_name, value in self.dict_onsets.items():           
             self.video_name = video_name
-            self.folder_name = value['folder_name']            
-          
+            self.folder_name = value['folder_name']                     
             self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name))      
             af = self.load_af()            
             logmel_all = af['logmel40'] 
             logmel = []
             for clip_logmel in logmel_all:
-                counter_clip += 1
-                if clip_logmel.shape[0] == self.clip_length * 100:
+                if counter_clip not in self.errorclips:
                     logmel.append(clip_logmel)
-                else:
-                    self.errorclips.append(counter_clip)
+                counter_clip += 1    
+                # counter_clip += 1
+                # if clip_logmel.shape[0] == self.clip_length * 100:
+                #     logmel.append(clip_logmel)
+                # else:
+                #     self.errorclips.append(counter_clip)
                     
             if self.featuretype == "ann-based":                  
                 af_all.append(logmel)
             elif self.featuretype == "yamnet-based":
-                af_all.extend(numpy.array(logmel))
-                    
-        for element in af_all:
-            if element.shape[0] != 1000:
-                print(element.shape)  
+                af_all.extend(numpy.array(logmel)) 
                 
         if self.featuretype == "ann-based": 
             audio_features = []
@@ -197,28 +231,8 @@ class Train_AVnet(AVnet):
         elif self.featuretype == "yamnet-based":
             audio_features = numpy.array(af_all)      
         return audio_features
-
-    def find_error_clips(self):
-        self.errorclips = [] 
-        counter_clip = 0
-
-        for video_name, value in self.dict_onsets.items():           
-            self.video_name = video_name
-            self.folder_name = value['folder_name']            
-          
-            self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name))      
-            af = self.load_af()            
-            logmel_all = af['logmel40'] 
-            logmel = []
-            for clip_logmel in logmel_all:
-                counter_clip += 1
-                if clip_logmel.shape[0] == self.clip_length * 100:
-                    logmel.append(clip_logmel)
-                else:
-                    self.errorclips.append(counter_clip)
-        
-        
     
+                    
     def get_visual_features (self):
         vf_all = []
         counter_clip = 0
@@ -232,20 +246,20 @@ class Train_AVnet(AVnet):
             resnet_all = vf['resnet152_avg_pool'] 
             resnet = []
             for clip_resnet in resnet_all:
+                if counter_clip not in self.errorclips:
+                    resnet.append(numpy.array(clip_resnet))
                 counter_clip += 1
-                if len(clip_resnet) == self.clip_length:
-                    resnet.append(clip_resnet)
-                else:
-                    self.errorclips.append(counter_clip)
+                # if len(clip_resnet) == self.clip_length:
+                #     resnet.append(clip_resnet)
+                # else:
+                #     self.errorclips.append(counter_clip)
             if self.featuretype == "ann-based":
                 len_of_longest_sequence = self.clip_length
-                resnet_padded = preparY (resnet_all , len_of_longest_sequence) # 50*2048
+                resnet_padded = preparY (resnet , len_of_longest_sequence) # 50*2048
                 vf_all.append(resnet_padded)
             elif self.featuretype == "yamnet-based":
-                vf_all.extend(numpy.array(resnet_all)) 
-            
-                
-           
+                vf_all.extend(numpy.array(resnet)) 
+         
                 
         if self.featuretype == "ann-based": 
             visual_features = []
@@ -259,12 +273,23 @@ class Train_AVnet(AVnet):
         
         return visual_features  
     
-
+    def get_input_shapes (self):
+        self.split = "testing" 
+        self.load_dict_onsets()
+        self.find_error_clips()
+        
+        audio_features_test = self.get_audio_features() 
+        visual_features_test = self.get_visual_features()
+        
+        Xshape = numpy.shape(audio_features_test)[1:]        
+        Yshape = numpy.shape(visual_features_test)[1:] 
+        return [Xshape , Yshape]
         
             
     def train(self):       
         self.split = "training"    
         self.load_dict_onsets()
+        self.find_error_clips()
         #APC
         #audio_features_train = self.produce_apc_features (audio_features_train[:,:-5,:])        
         visual_features_train = self.get_visual_features()      
@@ -275,22 +300,14 @@ class Train_AVnet(AVnet):
         del X,Y
         self.trainloss = history.history['loss'][0]
 
-    def get_input_shapes (self):
-        self.split = "testing" 
-        self.load_dict_onsets()
-        
-        audio_features_test = self.get_audio_features() 
-        visual_features_test = self.get_visual_features()
-        
-        Xshape = numpy.shape(audio_features_test)[1:]        
-        Yshape = numpy.shape(visual_features_test)[1:] 
-        return [Xshape , Yshape]   
+   
             
     
     def evaluate(self , find_recalls = True):
         
         self.split = "validation"       
         self.load_dict_onsets()
+        self.find_error_clips()
         #APC
         # l = 5
         # audio_features_test = self.produce_apc_features (audio_features_test[:,:-l,:])           

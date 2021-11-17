@@ -24,8 +24,9 @@ training_config = cfg.training_config
 model_config = cfg.model_config
 ###############################################################################
 
-self = Train_AVnet(model_config , training_config)
-X,Y = self.get_input_shapes()
+obj = Train_AVnet(model_config , training_config)
+
+obj()
 # self = Inspection(model_config , training_config)
 # dict_anns = self()
             
@@ -39,7 +40,7 @@ X,Y = self.get_input_shapes()
 # # kh
 
 import pickle5 as pickle
-with open("/worktmp/khorrami/project_5/video/features/youcook2/ann-based/testing/1/vf_resnet152", 'rb') as handle:
+with open('../../features/youcook2/yamnet-based/testing/197/vf_resnet152', 'rb') as handle:
     c = pickle.load(handle)
 
 # import pickle5 as pickle   
