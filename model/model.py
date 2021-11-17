@@ -22,7 +22,7 @@ class AVnet():
         self.visual_model_name = model_config["visual_model_name"]
         self.visual_layer_name = model_config["visual_layer_name"]      
         self.loss = model_config["loss"]
-        self.zeropadd = model_config["zeropadd_size"]
+        self.clip_length = model_config["clip_length"]
 
         
    

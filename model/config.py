@@ -1,8 +1,8 @@
 
 training_config = {  
   "featuredir": "../../features/youcook2/",
-  "featuretype": "ann-based",
-  "outputdir": "../../model/youcook2/benchmark_20/",
+  "featuretype": "yamnet-based",
+  "outputdir": "../../model/youcook2/yamnet/",
   "dataset": "YOUCOOK2",
   "use_pretrained": False,
   "save_results" : True,
@@ -15,7 +15,7 @@ model_config = {
     "visual_layer_name": "avg_pool",
     
     "loss" : "MMS", 
-    "zeropadd_size" : 20
+    "clip_length" : 10
 }
 
 

@@ -20,7 +20,7 @@ class Train_AVnet(AVnet):
         self.visual_model_name = model_config["visual_model_name"]
         self.visual_layer_name = model_config["visual_layer_name"]      
         self.loss = model_config["loss"]
-        self.zeropadd = model_config["zeropadd_size"]
+        self.clip_length = model_config["clip_length"]
         
         self.featuredir = training_config["featuredir"]
         self.featuretype = training_config ["featuretype"]  
@@ -41,7 +41,7 @@ class Train_AVnet(AVnet):
         self.valloss = 1000
         self.trainloss_all = []
         self.valloss_all = []
-        
+        self.errorclips = []
         
         
     def initialize_model_outputs(self):
@@ -122,18 +122,25 @@ class Train_AVnet(AVnet):
         self.error_list = []
         for video_name, value in self.dict_onsets.items():   
             self.video_name = video_name
-            self.folder_name = value['folder_name']                                  
-            self.feature_path = os.path.join(self.featuredir, self.featuretype , self.split ,  str(self.folder_name))      
-            vf = self.load_vf()
-            resnet_all = vf['resnet152_avg_pool'] # resnet features for each onset (10*2048)
-            for element in resnet_all:
-                if len(element) == 0:
-                    self.error_list.append(self.video_name)
-                    break
+            if len(value['onsets']) == 0 or len(value['onsets']) == 1:
+                self.error_list.append(self.video_name) 
+            else:
+                self.folder_name = value['folder_name']                                  
+                self.feature_path = os.path.join(self.featuredir, self.featuretype , self.split ,  str(self.folder_name))      
+                vf = self.load_vf()
+                # resnet features for each onset (10*2048)
+                # in yamnetset it was list so i changed it to array
+                resnet_all = vf['resnet152_avg_pool'] 
+                for element in resnet_all:
+                    if len(element) ==0 :
+                        self.error_list.append(self.video_name)
+                        break
                 
         for key_to_be_deleted in self.error_list:
             self.dict_onsets.pop(key_to_be_deleted)  
-
+        
+        
+    
 
     def load_af (self):       
         af_file = os.path.join(self.feature_path , 'af')   
@@ -147,32 +154,42 @@ class Train_AVnet(AVnet):
             vf = pickle.load(handle)           
         return vf   
     
-    # def update_error_list (self):
-    #     self.dict_errors[self.video_name] = self.folder_name
+    def update_error_list (self):
+        self.dict_errors[self.video_name] = self.folder_name
           
     
     def get_audio_features (self):
         
         af_all = [] 
-               
+         
+        counter_clip = 0
         for video_name, value in self.dict_onsets.items():           
             self.video_name = video_name
             self.folder_name = value['folder_name']            
-            if len(value['onsets']) == 0:
-                self.update_error_list()
-            else:
-                self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name))      
-                af = self.load_af()            
-                logmel_all = af['logmel40'] 
-                logmel = logmel_all#[0:10]
-                if self.featuretype == "ann-based":                  
-                    af_all.append(logmel)
-                elif self.featuretype == "yamnet-based":
-                    af_all.extend(logmel)
+          
+            self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name))      
+            af = self.load_af()            
+            logmel_all = af['logmel40'] 
+            logmel = []
+            for clip_logmel in logmel_all:
+                counter_clip += 1
+                if clip_logmel.shape[0] == self.clip_length * 100:
+                    logmel.append(clip_logmel)
+                else:
+                    self.errorclips.append(counter_clip)
                     
+            if self.featuretype == "ann-based":                  
+                af_all.append(logmel)
+            elif self.featuretype == "yamnet-based":
+                af_all.extend(numpy.array(logmel))
+                    
+        for element in af_all:
+            if element.shape[0] != 1000:
+                print(element.shape)  
+                
         if self.featuretype == "ann-based": 
             audio_features = []
-            len_of_longest_sequence = 100 * self.zeropadd
+            len_of_longest_sequence = 100 * self.clip_length
             for af_video in af_all:       
                 logmel_padded = preparX (af_video,len_of_longest_sequence )
                 audio_features.extend(logmel_padded)
@@ -181,31 +198,58 @@ class Train_AVnet(AVnet):
             audio_features = numpy.array(af_all)      
         return audio_features
 
+    def find_error_clips(self):
+        self.errorclips = [] 
+        counter_clip = 0
+
+        for video_name, value in self.dict_onsets.items():           
+            self.video_name = video_name
+            self.folder_name = value['folder_name']            
           
-            
+            self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name))      
+            af = self.load_af()            
+            logmel_all = af['logmel40'] 
+            logmel = []
+            for clip_logmel in logmel_all:
+                counter_clip += 1
+                if clip_logmel.shape[0] == self.clip_length * 100:
+                    logmel.append(clip_logmel)
+                else:
+                    self.errorclips.append(counter_clip)
+        
+        
     
     def get_visual_features (self):
         vf_all = []
+        counter_clip = 0
         for video_name, value in self.dict_onsets.items():   
             self.video_name = video_name
             self.folder_name = value['folder_name']                                  
             self.feature_path = os.path.join(self.featuredir, self.featuretype , self.split ,  str(self.folder_name))      
             vf = self.load_vf()
-            resnet_all = vf['resnet152_avg_pool'] # resnet features for each onset (10*2048)
-            
+            # resnet features for each onset (10*2048)
+            # now by mistake it is saved as list of n onsets
+            resnet_all = vf['resnet152_avg_pool'] 
+            resnet = []
+            for clip_resnet in resnet_all:
+                counter_clip += 1
+                if len(clip_resnet) == self.clip_length:
+                    resnet.append(clip_resnet)
+                else:
+                    self.errorclips.append(counter_clip)
             if self.featuretype == "ann-based":
-                len_of_longest_sequence = self.zeropadd
+                len_of_longest_sequence = self.clip_length
                 resnet_padded = preparY (resnet_all , len_of_longest_sequence) # 50*2048
                 vf_all.append(resnet_padded)
             elif self.featuretype == "yamnet-based":
-                vf_all.extend(resnet_all) 
+                vf_all.extend(numpy.array(resnet_all)) 
             
                 
            
                 
         if self.featuretype == "ann-based": 
             visual_features = []
-            len_of_longest_sequence =  self.zeropadd
+            len_of_longest_sequence =  self.clip_length
             for vf_video in vf_all:       
                 resnet_padded = preparY (vf_video , len_of_longest_sequence) # 50*2048
                 visual_features.extend(resnet_padded)
@@ -223,8 +267,7 @@ class Train_AVnet(AVnet):
         self.load_dict_onsets()
         #APC
         #audio_features_train = self.produce_apc_features (audio_features_train[:,:-5,:])        
-        visual_features_train = self.get_visual_features()
-        
+        visual_features_train = self.get_visual_features()      
         audio_features_train = self.get_audio_features()
         Y,X,b = prepare_data (audio_features_train , visual_features_train  , self.loss,  shuffle_data = True)
         del audio_features_train, visual_features_train 
@@ -235,8 +278,9 @@ class Train_AVnet(AVnet):
     def get_input_shapes (self):
         self.split = "testing" 
         self.load_dict_onsets()
-        visual_features_test = self.get_visual_features()
+        
         audio_features_test = self.get_audio_features() 
+        visual_features_test = self.get_visual_features()
         
         Xshape = numpy.shape(audio_features_test)[1:]        
         Yshape = numpy.shape(visual_features_test)[1:] 
@@ -325,7 +369,7 @@ class Train_AVnet(AVnet):
         
         [Xshape , Yshape] = self.get_input_shapes()
         self.visual_embedding_model, self.audio_embedding_model, self.av_model = self.build_network( Xshape , Yshape )
-        self.featuretype = 'ann-based'
+        #self.featuretype = 'ann-based'
         
         self.initialize_model_outputs()
         # this must be called for initial evaluation and getting X,Y dimensions

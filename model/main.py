@@ -24,11 +24,10 @@ training_config = cfg.training_config
 model_config = cfg.model_config
 ###############################################################################
 
-# train_object = Train_AVnet(model_config , training_config)
-# train_object()
-
-self = Inspection(model_config , training_config)
-dict_anns = self()
+self = Train_AVnet(model_config , training_config)
+X,Y = self.get_input_shapes()
+# self = Inspection(model_config , training_config)
+# dict_anns = self()
             
 
 
@@ -39,9 +38,9 @@ dict_anns = self()
 # visual_features = model_object.get_visual_features()
 # # kh
 
-# import pickle5 as pickle
-# with open("/worktmp2/hxkhkh/current/video/features/youcook2/ann-based/testing/0/af", 'rb') as handle:
-#     b = pickle.load(handle)
+import pickle5 as pickle
+with open("/worktmp/khorrami/project_5/video/features/youcook2/ann-based/testing/1/vf_resnet152", 'rb') as handle:
+    c = pickle.load(handle)
 
 # import pickle5 as pickle   
 # with open("/worktmp/khorrami/project_5/video/features/ouput/youcook2/ann-based/errors/testing_image_errors", 'rb') as handle:
