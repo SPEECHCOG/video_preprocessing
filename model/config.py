@@ -2,7 +2,7 @@
 training_config = {  
   "featuredir": "../../features/youcook2/",
   "featuretype": "yamnet-based",
-  "outputdir": "../../model/youcook2/yamnet/",
+  "outputdir": "../../model/youcook2/yamnet/eval_ann",
   "dataset": "YOUCOOK2",
   "use_pretrained": False,
   "save_results" : True,

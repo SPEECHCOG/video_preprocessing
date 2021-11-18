@@ -159,40 +159,42 @@ class Train_AVnet(AVnet):
 
 
     def find_error_clips(self):  
-        self.errorclips = {}         
-        # inspect audio clips
-        counter_clip = 0
-        for video_name, value in self.dict_onsets.items():           
-            self.video_name = video_name
-            self.folder_name = value['folder_name']                   
-            self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name))      
-            af = self.load_af()            
-            logmel_all = af['logmel40'] 
-            for clip_logmel in logmel_all:            
-                if clip_logmel.shape[0] != self.clip_length * 100:
-                    #self.errorclips[counter_clip] = {}
-                    self.errorclips[counter_clip] = 'a'
-                counter_clip += 1
-                
-        #inspect visual clips       
-        counter_clip = 0
-        for video_name, value in self.dict_onsets.items():           
-            self.video_name = video_name
-            self.folder_name = value['folder_name'] 
-            self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name)) 
-            vf = self.load_vf()
-            # resnet features for each onset (10*2048)
-            # now by mistake it is saved as list of n onsets
-            resnet_all = vf['resnet152_avg_pool']           
-            for clip_resnet in resnet_all:                
-                if len(clip_resnet) != self.clip_length:
-                    self.errorclips[counter_clip] = 'v'
-                    # if counter_clip in self.errorclips:
-                    #     self.errorclips[counter_clip]['v'] = 1
-                    # else:
-                    #     self.errorclips[counter_clip] = {}
-                    #     self.errorclips[counter_clip]['v'] = 1
-                counter_clip += 1 
+        self.errorclips = {} 
+
+        if self.featuretype == 'yamnet-based':       
+            # inspect audio clips
+            counter_clip = 0
+            for video_name, value in self.dict_onsets.items():           
+                self.video_name = video_name
+                self.folder_name = value['folder_name']                   
+                self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name))      
+                af = self.load_af()            
+                logmel_all = af['logmel40'] 
+                for clip_logmel in logmel_all:            
+                    if clip_logmel.shape[0] != self.clip_length * 100:
+                        #self.errorclips[counter_clip] = {}
+                        self.errorclips[counter_clip] = 'a'
+                    counter_clip += 1
+                    
+            #inspect visual clips       
+            counter_clip = 0
+            for video_name, value in self.dict_onsets.items():           
+                self.video_name = video_name
+                self.folder_name = value['folder_name'] 
+                self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name)) 
+                vf = self.load_vf()
+                # resnet features for each onset (10*2048)
+                # now by mistake it is saved as list of n onsets
+                resnet_all = vf['resnet152_avg_pool']           
+                for clip_resnet in resnet_all:                
+                    if len(clip_resnet) != self.clip_length:
+                        self.errorclips[counter_clip] = 'v'
+                        # if counter_clip in self.errorclips:
+                        #     self.errorclips[counter_clip]['v'] = 1
+                        # else:
+                        #     self.errorclips[counter_clip] = {}
+                        #     self.errorclips[counter_clip]['v'] = 1
+                    counter_clip += 1 
         
     def get_audio_features (self):
         
@@ -275,6 +277,7 @@ class Train_AVnet(AVnet):
     
     def get_input_shapes (self):
         self.split = "testing" 
+        self.featuretype = 'yamnet-based' 
         self.load_dict_onsets()
         self.find_error_clips()
         
@@ -287,7 +290,8 @@ class Train_AVnet(AVnet):
         
             
     def train(self):       
-        self.split = "training"    
+        self.split = "training"
+        self.featuretype = 'yamnet-based'   
         self.load_dict_onsets()
         self.find_error_clips()
         #APC
@@ -305,7 +309,8 @@ class Train_AVnet(AVnet):
     
     def evaluate(self , find_recalls = True):
         
-        self.split = "validation"       
+        self.split = "validation" 
+        self.featuretype = 'ann-based'
         self.load_dict_onsets()
         self.find_error_clips()
         #APC
@@ -378,7 +383,7 @@ class Train_AVnet(AVnet):
             plt.title(plot_names[plot_counter])
             plt.xlabel('epoch*5')
             plt.grid()
-
+        plt.title('evaluated on annotations')    
         plt.savefig(self.outputdir + 'evaluation_plot.pdf', format = 'pdf')            
         
     
