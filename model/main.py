@@ -43,9 +43,9 @@ import pickle5 as pickle
 with open('../../features/youcook2/yamnet-based/testing/197/vf_resnet152', 'rb') as handle:
     c = pickle.load(handle)
 
-# import pickle5 as pickle   
-# with open("/worktmp/khorrami/project_5/video/features/ouput/youcook2/ann-based/errors/testing_image_errors", 'rb') as handle:
-#     errors = pickle.load(handle)
+import pickle5 as pickle   
+with open("/worktmp/khorrami/project_5/video/features/youcook2/yamnet-based/testing/1/af", 'rb') as handle:
+    errors = pickle.load(handle)
 
 
 ################################################################## testing MMS

@@ -169,7 +169,7 @@ class Train_AVnet(AVnet):
                 self.folder_name = value['folder_name']                   
                 self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name))      
                 af = self.load_af()            
-                logmel_all = af['logmel40'] 
+                logmel_all = af['logmel64'] 
                 for clip_logmel in logmel_all:            
                     if clip_logmel.shape[0] != self.clip_length * 100:
                         #self.errorclips[counter_clip] = {}
@@ -206,7 +206,7 @@ class Train_AVnet(AVnet):
             self.folder_name = value['folder_name']                     
             self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name))      
             af = self.load_af()            
-            logmel_all = af['logmel40'] 
+            logmel_all = af['logmel64'] 
             logmel = []
             for clip_logmel in logmel_all:
                 if counter_clip not in self.errorclips:
@@ -383,7 +383,7 @@ class Train_AVnet(AVnet):
             plt.title(plot_names[plot_counter])
             plt.xlabel('epoch*5')
             plt.grid()
-        plt.title('evaluated on annotations')    
+         
         plt.savefig(self.outputdir + 'evaluation_plot.pdf', format = 'pdf')            
         
     
