@@ -1,7 +1,7 @@
 #  "../../data/input/"
 
 paths = {  
-  "split": "training",
+  "split": "testing",
   "datadir": "../../data/youcook2", #"/run/media/hxkhkh/b756dee3-de7e-4cdd-883b-ac95a8d00407/video/youcook2",
   "outputdir": "../../features/youcook2/yamnet-based/",
   "exp_name" : "exp4"
@@ -12,7 +12,7 @@ basic = {
     "audio_model" : "yamnet",
     "run_speech_detection" : True,
     "save_results" : True,
-    "plot_results" : False
+    "save_wavs" : False
 }
 
 yamnet_settings = {

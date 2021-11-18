@@ -18,6 +18,7 @@ exp_name = cfg.paths['exp_name']
 
 audio_model = cfg.basic['audio_model']
 dataset = cfg.basic['dataset']
+save_wavs = cfg.basic["save_wavs"]
 rsd = cfg.basic['run_speech_detection']
 yamnet_settings = cfg.yamnet_settings
 
@@ -25,13 +26,12 @@ yamnet_settings = cfg.yamnet_settings
 
 from analysis import Analysis
 
-run_analysis = Analysis( audio_model,dataset, datadir,outputdir,split, yamnet_settings, rsd , exp_name)
+run_analysis = Analysis( audio_model,dataset, datadir,outputdir,split, save_wavs, yamnet_settings, rsd , exp_name)
+run_analysis.save_wav_clips()
 
-run_analysis()
-
-import pickle
-with open("/worktmp2/hxkhkh/current/video/features/youcook2/ann-based/errors/training_errors", 'rb') as handle:
-    b = pickle.load(handle)
+# import pickle
+# with open("/worktmp2/hxkhkh/current/video/features/youcook2/ann-based/errors/training_errors", 'rb') as handle:
+#     b = pickle.load(handle)
 
 # import pickle
 # with open("/worktmp/khorrami/project_5/video/data/youcook2/output/yamnet-based/exp3/test/137/af", 'rb') as handle:

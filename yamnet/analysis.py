@@ -2,29 +2,28 @@ import os
 import librosa
 import numpy
 from random import shuffle
+import soundfile as sf
 import math
 import pickle
 import copy
-
-
 import utils
-
 import tensorflow_hub as hub
 
 class Analysis:
     
-    def __init__(self,audio_model,dataset, datadir, outputdir, split , yamnet_settings, rsd, exp_name):
+    def __init__(self,audio_model,dataset, datadir, outputdir, split ,save_wavs, yamnet_settings, rsd, exp_name):
         
         self.audio_model = audio_model
         self.dataset = dataset
         self.datadir = datadir
+        self.save_wavs = save_wavs
         self.outputdir = outputdir
         self.exp_name = exp_name
         self.split = split
         self.run_speech_detection = rsd
         
         self.yamnet_settings = yamnet_settings
-        
+        self.target_sr = self.yamnet_settings ["target_sample_rate"] 
         self.clip_length_seconds = self.yamnet_settings ["clip_length_seconds"]
         self.win_hope_yamnet = self.yamnet_settings ["win_hope_yamnet"] 
         self.win_hope_logmel = self.yamnet_settings ["win_hope_logmel"]
@@ -44,8 +43,7 @@ class Analysis:
         self.dict_logmel64 = {}
         self.dict_embeddings_yamnet = {}
 
-    def create_video_list (self ):
-        
+    def create_video_list (self ):     
         video_dir = os.path.join(self.datadir, 'videos' , self.split) 
         video_recepies = os.listdir(video_dir)
         video_list = []
@@ -54,15 +52,48 @@ class Analysis:
             video_list.extend([os.path.join(self.split , rec ,f) for f in files])
         return video_list
     
-    def load_video (self):
-        
+    def load_video (self):       
         video_path = os.path.join(self.datadir, 'videos' , self.video_name) 
-        target_sr = self.yamnet_settings ["target_sample_rate"]
-        
-        wav_data, sample_rate = librosa.load(video_path , sr=target_sr , mono=True)        
-        duration = len(wav_data)/target_sr
+        wav_data, sample_rate = librosa.load(video_path , sr=self.target_sr , mono=True)        
+        duration = len(wav_data)/self.target_sr
         self.video_duration = duration
         return wav_data
+    
+    def save_wav_files(self):  
+        video_list = self.create_video_list()
+        output_path = os.path.join(self.outputdir , 'wavs', self.split )
+        os.makedirs(output_path , exist_ok = True)
+        self.counter = 0 
+        for video_name in video_list:                   
+            self.video_name = video_name
+            wav_data = self.load_video()
+            output_name = output_path  + '/' +   str(self.counter) + '.wav'
+            sf.write(output_name, wav_data, self.target_sr)
+            self.counter += 1
+            
+    def load_dict_onsets (self):
+        input_name =  os.path.join(self.outputdir, self.exp_name , self.split + '_onsets') 
+        with open(input_name, 'rb') as handle:
+            dict_onsets = pickle.load(handle)
+        return dict_onsets
+
+    def save_wav_clips(self):
+        # this function saves audio clips from already detected onset lists
+        dict_onsets = self.load_dict_onsets ()
+    
+        self.counter = 0
+        for video_name, value in dict_onsets.items():      
+            print(self.counter)
+            self.video_name = video_name
+            self.folder_name = value['folder_name']
+            self.accepted_onsets_second = value['onsets']            
+            wav_data = self.load_video()
+            output_path = os.path.join(self.outputdir ,  self.exp_name, self.split ,  str(self.folder_name) , "wavs")
+            os.makedirs(output_path, exist_ok= True)
+            
+            for conter_onset, onset in enumerate(self.accepted_onsets_second):
+                wav_clip = wav_data[onset*self.target_sr: (onset + self.clip_length_seconds)*self.target_sr]               
+                sf.write(output_path + '/' + str(conter_onset) + '.wav' , wav_clip, self.target_sr)
     
     def load_speech_segments (self):
         file_name = self.outputdir + self.split + '_yamnet_speech' 
@@ -88,30 +119,25 @@ class Analysis:
         logmels = utils.calculate_logmels (wav_data , number_of_mel_bands , window_len_in_ms , window_hop_in_ms , sr_target)        
         return logmels
 
-
     
-    def execute_yamnet (self, wavedata ): 
-  
+    def execute_yamnet (self, wavedata ):  
         scores, embeddings, log_mel_yamnet = self.model(wavedata)       
         scores_np = scores.numpy()
         logmel_yamnet_np = log_mel_yamnet.numpy()
         embeddings_np = embeddings.numpy()
         return scores_np, embeddings_np, logmel_yamnet_np
 
+
     
-    def detect_speech_frames (self, scores_yamnet): 
-        
+    def detect_speech_frames (self, scores_yamnet):         
         all_max_class_indexes = scores_yamnet.argmax(axis = 1)        
         #class_index_accepted = self.yamnet_settings [ "class_index_accepted" ]
         speech_segments =  [item == 0 or item == 1 or item == 2 or item == 3 for item in all_max_class_indexes]
         speech_segments = numpy.multiply(speech_segments , 1)
         return speech_segments
 
-    def initialize_global_params (self):
-        pass
-        
-    def produce_onset_candidates_1 (self, speech_segments):
-              
+
+    def produce_onset_candidates_1 (self, speech_segments):              
         clip_length_seconds = self.clip_length_seconds       
         accepted_rate = self.yamnet_settings ["acceptance_snr"]
         skip_seconds = self.yamnet_settings ["skip_seconds"]
@@ -144,12 +170,10 @@ class Analysis:
                 onsets_yamnet.append(onset_candidate)  
             if len(onsets_yamnet) >= number_of_clips:
                 break
-
-         
+       
         onsets_second = [math.floor(item * self.win_hope_yamnet) for item in onsets_yamnet]
         onsets_logmel = [math.floor(item / self.win_hope_logmel) for item in onsets_second]
-        
-                
+                       
         print('###############################################################')        
         print(self.counter)
         print(self.video_name)
@@ -160,8 +184,7 @@ class Analysis:
         return onsets_yamnet , onsets_second , onsets_logmel 
 
     def produce_onset_candidates_2 (self, speech_segments):
-              
-              
+                          
         accepted_rate = self.yamnet_settings ["acceptance_snr"]
         accepted_overlap_second = self.yamnet_settings ["accepted_overlap_second"]
         
@@ -171,8 +194,7 @@ class Analysis:
                      
         clip_length_yamnet = self.clip_length_yamnet  # e.g. 21 for 10 second        
         accepted_plus = int(round(clip_length_yamnet * accepted_rate)) # e.g. 17
-        
-        
+                
         # scanning the signal (yamnet output scores)
         scanned_speech = []
         len_silde_window = clip_length_yamnet    
@@ -194,22 +216,18 @@ class Analysis:
         for counter, value in enumerate(updated_seq):
             if value==1:
                 updated_seq[counter+ 1: counter + skip_len] = 0
-                    
-        
-        
+                           
         onsets_yamnet = [counter for counter,value in enumerate(updated_seq) if value==1]
         onsets_second = [math.floor(item * self.win_hope_yamnet) for item in onsets_yamnet]
         onsets_logmel = [math.floor(item / self.win_hope_logmel) for item in onsets_second]
- 
-        
+    
         print('###############################################################')        
         print(self.counter)
         print(self.video_name)
         print(self.video_duration)
         print(onsets_second)       
         print('###############################################################')
-         
-
+        
         return onsets_yamnet , onsets_second , onsets_logmel     
 
 
@@ -285,18 +303,12 @@ class Analysis:
     def to_run_speech_detection(self):
         video_list = self.create_video_list()
         self.model = hub.load('https://tfhub.dev/google/yamnet/1')
+        self.counter = 0
         for video_name in video_list:
                        
             self.video_name = video_name
-            # print(self.counter)
-            # print(self.video_name)
-            # print('........step 0 is done ...........' )                
-            # do all analysis
-            #try:
-            wav_data = self.load_video ()
-            #print('........vide is loaded ...........' )  
-            logmels = self.extract_logmel_features (wav_data)
-            #print('........logmels are extracted ...........' )  
+            wav_data = self.load_video()
+            logmels = self.extract_logmel_features (wav_data) 
             speech_segments, embeddings_yamnet, logmel_yamnet = self.find_speech_segments(wav_data)
 
             print('........step 1 is done ...........' )
@@ -314,9 +326,7 @@ class Analysis:
             
             self.save_per_video (onsets_second , onsets_logmel, accepted_logmel40, accepted_logmel64,accepted_embeddings )
             
-            print('........step 3 is done ...........' )    
-            # except:
-            #     self.update_error_list()
+            print('........step 3 is done ...........' )   
                 
             self.counter += 1 
         
@@ -329,11 +339,9 @@ class Analysis:
         
          
         
-    def run_from_file (self):
-        
+    def run_from_file (self):    
         dict_speech_segments = self.load_speech_segments()
-        dict_logmels = self.load_logmel_feature()
-        
+        dict_logmels = self.load_logmel_feature()       
         video_list = self.create_video_list()
         self.model = hub.load('https://tfhub.dev/google/yamnet/1')
         
@@ -360,8 +368,7 @@ class Analysis:
             except:
                 self.update_error_list()
                 
-            self.counter += 1    
-            
+            self.counter += 1             
             
         self.save_onsets()
         
