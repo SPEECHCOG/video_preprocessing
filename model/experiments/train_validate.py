@@ -13,7 +13,7 @@ from matplotlib import pyplot as plt
 
 class Train_AVnet(AVnet):
     
-    def __init__(self, model_config , training_config):
+    def __init__(self, model_config , feature_config , training_config):
         AVnet.__init__(self, model_config)
         
         self.audio_model_name = model_config["audio_model_name"]
@@ -21,6 +21,10 @@ class Train_AVnet(AVnet):
         self.visual_layer_name = model_config["visual_layer_name"]      
         self.loss = model_config["loss"]
         self.clip_length = model_config["clip_length"]
+        
+        self.audio_feature_name = feature_config ["audio_feature_name"]
+        self.speech_feature_name = feature_config ["speech_feature_name"]
+        self.image_feature_name = feature_config ["image_feature_name"]
         
         self.featuredir = training_config["featuredir"]
         self.featuretype = training_config ["featuretype"]  
@@ -169,13 +173,26 @@ class Train_AVnet(AVnet):
                 self.folder_name = value['folder_name']                   
                 self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name))      
                 af = self.load_af()            
-                logmel_all = af['logmel64'] 
+                logmel_all = af['embeddings'] 
                 for clip_logmel in logmel_all:            
-                    if clip_logmel.shape[0] != self.clip_length * 100:
+                    if clip_logmel.shape[0] != self.clip_length * 2.1:
                         #self.errorclips[counter_clip] = {}
                         self.errorclips[counter_clip] = 'a'
                     counter_clip += 1
-                    
+            
+            #inspect speech clips
+            counter_clip = 0
+            for video_name, value in self.dict_onsets.items():           
+                self.video_name = video_name
+                self.folder_name = value['folder_name']                   
+                self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name))      
+                af = self.load_af()            
+                logmel_all = af['logmel40'] 
+                for clip_logmel in logmel_all:            
+                    if clip_logmel.shape[0] != self.clip_length * 100:
+                        #self.errorclips[counter_clip] = {}
+                        self.errorclips[counter_clip] = 's'
+                    counter_clip += 1
             #inspect visual clips       
             counter_clip = 0
             for video_name, value in self.dict_onsets.items():           
@@ -196,7 +213,7 @@ class Train_AVnet(AVnet):
                         #     self.errorclips[counter_clip]['v'] = 1
                     counter_clip += 1 
         
-    def get_audio_features (self):
+    def get_audio_features (self, feature_name ):
         
         af_all = [] 
          
@@ -206,7 +223,7 @@ class Train_AVnet(AVnet):
             self.folder_name = value['folder_name']                     
             self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name))      
             af = self.load_af()            
-            logmel_all = af['logmel64'] 
+            logmel_all = af[feature_name] 
             logmel = []
             for clip_logmel in logmel_all:
                 if counter_clip not in self.errorclips:
@@ -235,7 +252,7 @@ class Train_AVnet(AVnet):
         return audio_features
     
                     
-    def get_visual_features (self):
+    def get_visual_features (self, fetaure_name ):
         vf_all = []
         counter_clip = 0
         for video_name, value in self.dict_onsets.items():   
@@ -245,7 +262,7 @@ class Train_AVnet(AVnet):
             vf = self.load_vf()
             # resnet features for each onset (10*2048)
             # now by mistake it is saved as list of n onsets
-            resnet_all = vf['resnet152_avg_pool'] 
+            resnet_all = vf[fetaure_name] 
             resnet = []
             for clip_resnet in resnet_all:
                 if counter_clip not in self.errorclips:
@@ -277,31 +294,41 @@ class Train_AVnet(AVnet):
     
     def get_input_shapes (self):
         self.split = "testing" 
-        self.featuretype = 'ann-based' 
-        self.load_dict_onsets()
+        self.featuretype = 'yamnet-based' 
+        self.load_dict_onsets()   
         self.find_error_clips()
         
-        audio_features_test = self.get_audio_features() 
-        visual_features_test = self.get_visual_features()
         
-        Xshape = numpy.shape(audio_features_test)[1:]        
+        audio_features_test = self.get_audio_features(self.audio_feature_name) 
+        
+        speech_features_test = self.get_audio_features(self.speech_feature_name) 
+        
+        visual_features_test = self.get_visual_features(self.image_feature_name)
+        
+        X1shape = numpy.shape(audio_features_test)[1:] 
+        X2shape = numpy.shape(speech_features_test)[1:]
         Yshape = numpy.shape(visual_features_test)[1:] 
-        return [Xshape , Yshape]
+        return [X1shape , X2shape, Yshape]
         
             
     def train(self):       
         self.split = "training"
-        self.featuretype = 'ann-based'   
+        self.featuretype = 'yamnet-based'   
         self.load_dict_onsets()
         self.find_error_clips()
         #APC
-        #audio_features_train = self.produce_apc_features (audio_features_train[:,:-5,:])        
-        visual_features_train = self.get_visual_features()      
-        audio_features_train = self.get_audio_features()
-        Y,X,b = prepare_data (audio_features_train , visual_features_train  , self.loss,  shuffle_data = True)
+        #audio_features_train = self.produce_apc_features (audio_features_train[:,:-5,:]) 
+        
+        audio_features_train = self.get_audio_features(self.audio_feature_name) 
+        
+        speech_features_train = self.get_audio_features(self.speech_feature_name) 
+        
+        visual_features_train = self.get_visual_features(self.image_feature_name)
+ 
+        Y, X1, X2, b = prepare_data (audio_features_train , speech_features_train , visual_features_train  , self.loss,  shuffle_data = True)
         del audio_features_train, visual_features_train 
-        history =  self.av_model.fit([Y,X], b, shuffle=True, epochs=5, batch_size=128)
-        del X,Y
+        history =  self.av_model.fit([Y,X1,X2], b, shuffle=True, epochs=5, batch_size=128)
+        del X1,X2,Y
         self.trainloss = history.history['loss'][0]
 
    
@@ -310,26 +337,29 @@ class Train_AVnet(AVnet):
     def evaluate(self , find_recalls = True):
         
         self.split = "validation" 
-        self.featuretype = 'ann-based'
+        self.featuretype = 'yamnet-based'
         self.load_dict_onsets()
         self.find_error_clips()
         #APC
         # l = 5
-        # audio_features_test = self.produce_apc_features (audio_features_test[:,:-l,:])           
-        visual_features_test = self.get_visual_features()
+        # audio_features_test = self.produce_apc_features (audio_features_test[:,:-l,:]) 
+        audio_features_test = self.get_audio_features(self.audio_feature_name) 
         
-        audio_features_test = self.get_audio_features() 
-        Ytest, Xtest, b_val = prepare_data (audio_features_test , visual_features_test , self.loss,  shuffle_data = True) 
-        del audio_features_test, visual_features_test                  
-        self.valloss = self.av_model.evaluate([Ytest,Xtest], b_val, batch_size=128)
+        speech_features_test = self.get_audio_features(self.speech_feature_name) 
+        
+        visual_features_test = self.get_visual_features(self.image_feature_name)
+        
+        Ytest, X1test, X2test, b_val = prepare_data (audio_features_test , speech_features_test, visual_features_test , self.loss,  shuffle_data = False) 
+        del audio_features_test, speech_features_test, visual_features_test                  
+        self.valloss = self.av_model.evaluate([Ytest,X1test,X2test], b_val, batch_size=128)
         
         
         ########### calculating Recall@10 
         if find_recalls:
-            audio_embeddings = self.audio_embedding_model.predict(Xtest)    
+            audio_embeddings = self.audio_embedding_model.predict([X1test, X2test])    
             visual_embeddings = self.visual_embedding_model.predict(Ytest) 
-            number_of_samples = len(Xtest)
-            del Xtest,Ytest
+            number_of_samples = len(X1test)
+            del X1test,X2test,Ytest
             # audio_embeddings = numpy.squeeze(audio_embeddings)
             # visual_embeddings = numpy.squeeze(visual_embeddings)
             print('checking embedd shape')
@@ -337,7 +367,7 @@ class Train_AVnet(AVnet):
             print(visual_embeddings.shape)
                                
             poolsize =  3206
-            number_of_trials = 1
+            number_of_trials = 3
             
             recall_av_vec = calculate_recallat10( audio_embeddings, visual_embeddings, number_of_trials,  number_of_samples  , poolsize )          
             recall_va_vec = calculate_recallat10( visual_embeddings , audio_embeddings, number_of_trials,  number_of_samples , poolsize ) 
@@ -382,15 +412,14 @@ class Train_AVnet(AVnet):
             plt.plot(plot_value)
             plt.title(plot_names[plot_counter])
             plt.xlabel('epoch*5')
-            plt.grid()
-         
+            plt.grid()         
         plt.savefig(self.outputdir + 'evaluation_plot.pdf', format = 'pdf')            
         
     
     def __call__ (self):
         
-        [Xshape , Yshape] = self.get_input_shapes()
-        self.visual_embedding_model, self.audio_embedding_model, self.av_model = self.build_network( Xshape , Yshape )
+        [X1shape , X2shape , Yshape] = self.get_input_shapes()
+        self.visual_embedding_model, self.audio_embedding_model, self.av_model = self.build_network( X1shape , X2shape , Yshape )
         #self.featuretype = 'ann-based'
         
         self.initialize_model_outputs()

@@ -22,10 +22,11 @@ import config as cfg
 
 training_config = cfg.training_config
 model_config = cfg.model_config
+feature_config = cfg.feature_config
 ###############################################################################
 
-obj = Train_AVnet(model_config , training_config)
-
+obj = Train_AVnet(model_config , feature_config, training_config)
+[X1shape , X2shape, Yshape] = obj.get_input_shapes()
 obj()
 # self = Inspection(model_config , training_config)
 # dict_anns = self()
@@ -44,8 +45,8 @@ with open('../../features/youcook2/yamnet-based/testing/197/vf_resnet152', 'rb')
     c = pickle.load(handle)
 
 import pickle5 as pickle   
-with open("/worktmp/khorrami/project_5/video/features/youcook2/yamnet-based/testing/1/af", 'rb') as handle:
-    errors = pickle.load(handle)
+with open("/worktmp/khorrami/project_5/video/features/youcook2/yamnet-based/testing/198/af", 'rb') as handle:
+    af = pickle.load(handle)
 
 
 ################################################################## testing MMS

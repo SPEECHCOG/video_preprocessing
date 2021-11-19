@@ -73,7 +73,7 @@ def prepare_triplet_data (audio_features , visual_features):
 
 
 
-def prepare_data (audio_features , visual_features , loss, shuffle_data = False):
+def prepare_data (audio_features , speech_features, visual_features , loss, shuffle_data = False):
     if loss =='triplet':
         Ydata, Xdata, target = prepare_triplet_data (audio_features , visual_features)
     else:
@@ -82,13 +82,15 @@ def prepare_data (audio_features , visual_features , loss, shuffle_data = False)
         if shuffle_data:           
             random_order = numpy.random.permutation(int(n_samples)) 
             Ydata = visual_features[random_order ]
-            Xdata = audio_features[random_order ]                    
+            X1data = audio_features[random_order ]
+            X2data = speech_features[random_order ]                    
         else:
             Ydata = visual_features
-            Xdata = audio_features     
+            X1data = audio_features
+            X2data = speech_features
         
             
-    return Ydata, Xdata , target
+    return Ydata, X1data , X2data, target
 
 def calculate_recallat10( embedding_1,embedding_2, sampling_times, number_of_all_audios, pool):   
     recall_all = []

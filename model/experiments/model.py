@@ -1,9 +1,6 @@
 
 from utils import triplet_loss,  mms_loss,  prepare_data, preparX, preparY, calculate_recallat10 
 
-
-
-
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Lambda
 
@@ -23,7 +20,6 @@ class AVnet():
         self.visual_layer_name = model_config["visual_layer_name"]      
         self.loss = model_config["loss"]
         self.clip_length = model_config["clip_length"]
-
         
    
     def build_apc (self, Xshape):      
@@ -71,7 +67,7 @@ class AVnet():
     
 
         
-    def build_simple_audio_model (self,Xshape ):     
+    def build_simple_speech_model (self,Xshape ):     
         dropout_size = 0.3
         activation_C='relu'
     
@@ -103,13 +99,37 @@ class AVnet():
         #audio_model.summary()
         return audio_sequence , out_audio_channel , audio_model
 
-    def build_resDAVEnet (self, Xshape):     
-    
-        audio_sequence = Input(shape=Xshape) #Xshape = (5000, 40)
-        audio_sequence_masked = Masking (mask_value=0., input_shape=Xshape)(audio_sequence)
+    def build_resDAVEnet (self, X1shape, X2shape): 
+        
+        audio_sequence = Input(shape=X1shape) #X1hape = (21, 1024)
+        speech_sequence = Input(shape=X2shape) #X2shape = (1000, 40)
+        
+        # audio channel
+        audio_sequence_masked = Masking (mask_value=0., input_shape=X1shape)(audio_sequence)
         strd = 2
         
-        x0 = Conv1D(128,1,strides = 1, padding="same")(audio_sequence_masked)
+        a0 = Conv1D(1024,1,strides = 1, padding="same")(audio_sequence_masked)
+        a0 = BatchNormalization(axis=-1)(a0)
+        a0 = ReLU()(a0) #(21,1024)
+        # layer 1  
+        in_residual = a0  
+        a1 = Conv1D(1024,9,strides = 1, padding="same")(in_residual)
+        a1 = BatchNormalization(axis=-1)(a1)
+        a1 = ReLU()(a1)       
+        a2 = Conv1D(1024,9,strides = strd, padding="same")(a1)  
+        downsample = Conv1D(1024,9,strides = strd, padding="same")(in_residual)
+        out = Add()([downsample,a2])
+        out_a = ReLU()(out)
+        
+        out_sound_channel  = AveragePooling1D(11,padding='same')(out_a) #(N,1, 1024)
+        out_sound_channel = Reshape([out_sound_channel.shape[2]])(out_sound_channel)  #(N, 1024)
+        out_sound_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_sound')(out_sound_channel)
+        
+        # speech channel
+        speech_sequence_masked = Masking (mask_value=0., input_shape=X2shape)(speech_sequence)
+        strd = 2
+        
+        x0 = Conv1D(128,1,strides = 1, padding="same")(speech_sequence_masked)
         x0 = BatchNormalization(axis=-1)(x0)
         x0 = ReLU()(x0) 
           
@@ -119,8 +139,8 @@ class AVnet():
         x1 = BatchNormalization(axis=-1)(x1)
         x1 = ReLU()(x1)       
         x2 = Conv1D(128,9,strides = strd, padding="same")(x1)  
-        x1downsample = Conv1D(128,9,strides = strd, padding="same")(x1)
-        out = Add()([x1downsample,x2])
+        downsample = Conv1D(128,9,strides = strd, padding="same")(in_residual)
+        out = Add()([downsample,x2])
         out_1 = ReLU()(out) # (500, 128) 
         
         # layer 2
@@ -129,8 +149,8 @@ class AVnet():
         x1 = BatchNormalization(axis=-1)(x1)
         x1 = ReLU()(x1)    
         x2 = Conv1D(256,9,strides = strd, padding="same")(x1)  
-        x1downsample = Conv1D(256,9,strides = strd, padding="same")(x1)
-        out = Add()([x1downsample,x2])
+        downsample = Conv1D(256,9,strides = strd, padding="same")(in_residual)
+        out = Add()([downsample,x2])
         out_2 = ReLU()(out) # (256, 256)
         
         # layer 3
@@ -139,8 +159,8 @@ class AVnet():
         x1 = BatchNormalization(axis=-1)(x1)
         x1 = ReLU()(x1)    
         x2 = Conv1D(512,9,strides = strd, padding="same")(x1)  
-        x1downsample = Conv1D(512,9,strides = strd, padding="same")(x1)
-        out = Add()([x1downsample,x2])
+        downsample = Conv1D(512,9,strides = strd, padding="same")(in_residual)
+        out = Add()([downsample,x2])
         out_3 = ReLU()(out) # (128, 512)
 
         
@@ -150,8 +170,8 @@ class AVnet():
         x1 = BatchNormalization(axis=-1)(x1)
         x1 = ReLU()(x1)       
         x2 = Conv1D(1024,9,strides = strd, padding="same")(x1)  
-        x1downsample = Conv1D(1024,9,strides = strd, padding="same")(x1)
-        out = Add()([x1downsample,x2])
+        downsample = Conv1D(1024,9,strides = strd, padding="same")(in_residual)
+        out = Add()([downsample,x2])
         out_4 = ReLU()(out)   # (64, 1024)  
         
         #self attention
@@ -176,14 +196,17 @@ class AVnet():
         
         # poling
         
-        out_audio_channel  = AveragePooling1D(512,padding='same')(out_4) 
-        out_audio_channel = Reshape([out_audio_channel.shape[2]])(out_audio_channel) 
+        out_speech_channel  = AveragePooling1D(512,padding='same')(out_4) #(N,1, 1024)
+        out_speech_channel = Reshape([out_speech_channel.shape[2]])(out_speech_channel)  #(N, 1024)      
+        out_speech_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_speech')(out_speech_channel)
         
-        out_audio_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_audio')(out_audio_channel)
+        # combining sound and speech branches
+        out_audio_channel = Concatenate(axis=-1)([out_sound_channel, out_speech_channel])
         
-        audio_model = Model(inputs= audio_sequence, outputs = out_audio_channel )
+        
+        audio_model = Model(inputs= [audio_sequence, speech_sequence], outputs = out_audio_channel )
         #audio_model.summary()
-        return audio_sequence , out_audio_channel , audio_model   
+        return audio_sequence , speech_sequence  , out_audio_channel , audio_model   
      
     def build_visual_model (self, Yshape):
         
@@ -228,13 +251,13 @@ class AVnet():
         return visual_sequence , out_visual_channel , visual_model
 
      
-    def build_network(self, Xshape , Yshape):
+    def build_network(self, X1shape , X2shape , Yshape):
            
         visual_sequence , out_visual_channel , visual_model = self. build_visual_model (Yshape)
         if self.audio_model_name == "resDAVEnet":        
-            audio_sequence , out_audio_channel , audio_model = self.build_resDAVEnet (Xshape)            
+            audio_sequence , speech_sequence  , out_audio_channel , audio_model   = self.build_resDAVEnet (X1shape , X2shape)            
         elif  self.audio_model_name == "simplenet": 
-            audio_sequence , out_audio_channel , audio_model = self.build_simple_audio_model (Xshape)
+            audio_sequence , out_audio_channel , audio_model = self.build_simple_audio_model (X1shape , X2shape)
         
         
         V = out_visual_channel
@@ -250,7 +273,7 @@ class AVnet():
         gatedA = Multiply(name= 'multiplyA')([gatedA_1, gatedA_2])
         
         visual_embedding_model = Model(inputs=visual_sequence, outputs = gatedV, name='visual_embedding_model')
-        audio_embedding_model = Model(inputs=audio_sequence, outputs = gatedA, name='audio_embedding_model')
+        audio_embedding_model = Model(inputs=[audio_sequence , speech_sequence], outputs = gatedA, name='audio_embedding_model')
         
         if self.loss == "triplet":
             
@@ -260,7 +283,7 @@ class AVnet():
             
         elif self.loss == "MMS":
             s_output = Concatenate(axis=1)([Reshape([1 , gatedV.shape[1]])(gatedV) ,  Reshape([1 ,gatedA.shape[1]])(gatedA)])
-            final_model = Model(inputs=[visual_sequence, audio_sequence], outputs = s_output )
+            final_model = Model(inputs=[visual_sequence, [audio_sequence , speech_sequence]], outputs = s_output )
             final_model.compile(loss=mms_loss, optimizer= Adam(lr=1e-03))
     
         #final_model.summary()
