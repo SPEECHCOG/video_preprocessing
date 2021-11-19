@@ -119,8 +119,8 @@ class AVnet():
         x1 = BatchNormalization(axis=-1)(x1)
         x1 = ReLU()(x1)       
         x2 = Conv1D(128,9,strides = strd, padding="same")(x1)  
-        x1downsample = Conv1D(128,9,strides = strd, padding="same")(x1)
-        out = Add()([x1downsample,x2])
+        downsample = Conv1D(128,9,strides = strd, padding="same")(in_residual)
+        out = Add()([downsample,x2])
         out_1 = ReLU()(out) # (500, 128) 
         
         # layer 2
@@ -129,8 +129,8 @@ class AVnet():
         x1 = BatchNormalization(axis=-1)(x1)
         x1 = ReLU()(x1)    
         x2 = Conv1D(256,9,strides = strd, padding="same")(x1)  
-        x1downsample = Conv1D(256,9,strides = strd, padding="same")(x1)
-        out = Add()([x1downsample,x2])
+        downsample = Conv1D(256,9,strides = strd, padding="same")(in_residual)
+        out = Add()([downsample,x2])
         out_2 = ReLU()(out) # (256, 256)
         
         # layer 3
@@ -139,8 +139,8 @@ class AVnet():
         x1 = BatchNormalization(axis=-1)(x1)
         x1 = ReLU()(x1)    
         x2 = Conv1D(512,9,strides = strd, padding="same")(x1)  
-        x1downsample = Conv1D(512,9,strides = strd, padding="same")(x1)
-        out = Add()([x1downsample,x2])
+        downsample = Conv1D(512,9,strides = strd, padding="same")(in_residual)
+        out = Add()([downsample,x2])
         out_3 = ReLU()(out) # (128, 512)
 
         
@@ -150,8 +150,8 @@ class AVnet():
         x1 = BatchNormalization(axis=-1)(x1)
         x1 = ReLU()(x1)       
         x2 = Conv1D(1024,9,strides = strd, padding="same")(x1)  
-        x1downsample = Conv1D(1024,9,strides = strd, padding="same")(x1)
-        out = Add()([x1downsample,x2])
+        downsample = Conv1D(1024,9,strides = strd, padding="same")(in_residual)
+        out = Add()([downsample,x2])
         out_4 = ReLU()(out)   # (64, 1024)  
         
         #self attention
