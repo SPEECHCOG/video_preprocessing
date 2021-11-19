@@ -1,5 +1,5 @@
 import json
-
+import pickle
 json_file = '../../../data/youcook2/bb/annotations/yc2_bb_val_annotations.json'
 with open(json_file) as handle:
     json_content = json.load(handle)
@@ -72,6 +72,20 @@ def create_video_names(video_list):
         video_names.append(video_name)
     return video_names 
 
+def load_dict_onsets (split):
+    input_name =  os.path.join('../../../features/youcook2/ann-based' , split + '_onsets')   
+    with open(input_name, 'rb') as handle:
+        dict_onsets = pickle.load(handle)
+    return dict_onsets
+
+def create_folder_list(split):
+    dict_onsets = load_dict_onsets (split)
+    folders = []
+    for video_name, value in dict_onsets.items():      
+        folders.append(value['folder_name']) 
+    return folders
+folders =  create_folder_list('validation') 
+      
 video_list = create_video_list (datadir, split )
 video_names = create_video_names (video_list)
 
@@ -181,7 +195,7 @@ for video_fullname, value in all_info.items():
     except:
         pass
 
-import pickle
+
 with open(outputdir + split + '_clips_bbx' , 'wb') as handle:
      pickle.dump(clips_bbx, handle)
      
