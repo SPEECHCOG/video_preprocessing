@@ -51,12 +51,12 @@ class Train_AVnet(AVnet):
     def initialize_model_outputs(self):
         
         if self.use_pretrained:
-            data = scipy.io.loadmat(os.path.join(self.outputdir , 'results.mat'), 
-                                    variable_names=['allepochs_valloss','allepochs_trainloss','all_avRecalls', 'all_vaRecalls'])
-            allepochs_valloss = data['allepochs_valloss'][0]
-            allepochs_trainloss = data['allepochs_trainloss'][0]
-            all_avRecalls = data['all_avRecalls'][0]
-            all_vaRecalls = data['all_vaRecalls'][0]
+            data = scipy.io.loadmat(os.path.join(self.outputdir , 'evaluation_results.mat'), 
+                                    variable_names=['valloss_all','trainloss_all','av_all', 'all_va_all'])
+            allepochs_valloss = data['valloss_all'][0]
+            allepochs_trainloss = data['trainloss_all'][0]
+            all_avRecalls = data['av_all'][0]
+            all_vaRecalls = data['all_va_all'][0]
             
             self.trainloss_all = numpy.ndarray.tolist(allepochs_trainloss)
             self.valloss_all = numpy.ndarray.tolist(allepochs_valloss)          
@@ -423,6 +423,8 @@ class Train_AVnet(AVnet):
         #self.featuretype = 'ann-based'
         
         self.initialize_model_outputs()
+        if self.use_pretrained:
+            self.av_model.load_weights(self.outputdir + 'model_weights.h5')
         # this must be called for initial evaluation and getting X,Y dimensions
         self.evaluate(find_recalls = True)
 

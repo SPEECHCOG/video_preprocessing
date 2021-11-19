@@ -40,13 +40,13 @@ obj()
 # visual_features = model_object.get_visual_features()
 # # kh
 
-import pickle5 as pickle
-with open('../../features/youcook2/yamnet-based/testing/197/vf_resnet152', 'rb') as handle:
-    c = pickle.load(handle)
+# import pickle5 as pickle
+# with open('../../features/youcook2/yamnet-based/testing/197/vf_resnet152', 'rb') as handle:
+#     c = pickle.load(handle)
 
-import pickle5 as pickle   
-with open("/worktmp/khorrami/project_5/video/features/youcook2/yamnet-based/testing/198/af", 'rb') as handle:
-    af = pickle.load(handle)
+# import pickle5 as pickle   
+# with open("/worktmp/khorrami/project_5/video/features/youcook2/yamnet-based/testing/198/af", 'rb') as handle:
+#     af = pickle.load(handle)
 
 
 ################################################################## testing MMS
