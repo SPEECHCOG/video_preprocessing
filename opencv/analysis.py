@@ -185,7 +185,7 @@ class Analysis:
     def to_save_images (self):
         # video_list = self.create_video_list()
         dict_onsets = self.load_dict_onsets ()
-        self.counter = 0
+        
         for video_name, value in dict_onsets.items():      
             print(self.counter)
             self.video_name = video_name
@@ -194,7 +194,7 @@ class Analysis:
             cap = self.load_video ()
             
             self.write_clip_images(cap)
-            self.counter += 1
+            
             
             
     def __call__ ( self):
@@ -204,18 +204,19 @@ class Analysis:
             self.visual_model = Model(inputs=base_model.input,outputs=base_model.get_layer(self.visual_layer_name).output)
         
         dict_onsets = self.load_dict_onsets ()
-        self.counter = 0        
+        #self.counter = 0        
         for video_name, value in dict_onsets.items(): 
             self.video_name = video_name
             self.folder_name = value['folder_name']
-            self.accepted_onsets_second = value['onsets']            
-            cap = self.load_video ()
-            if self.save_visual_features:
-                vf_video = self.find_video_features(cap)
-                self.save_per_video( vf_video)
-            if self.save_images:
-                self.write_clip_images(cap)
-                
-            self.counter += 1 
-            print(self.folder_name)
+            if self.folder_name > 182:
+                self.accepted_onsets_second = value['onsets']            
+                cap = self.load_video ()
+                if self.save_visual_features:
+                    vf_video = self.find_video_features(cap)
+                    self.save_per_video( vf_video)
+                if self.save_images:
+                    self.write_clip_images(cap)
+                    
+                #self.counter += 1 
+                print(self.folder_name)
 
