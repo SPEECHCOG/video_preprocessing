@@ -38,11 +38,16 @@ run_analysis()
 # visual_feature_extractor()
 
 
-# import pickle
-# with open("/worktmp/khorrami/project_5/video/data/youcook2/output/test/0/af", 'rb') as handle:
-#     b = pickle.load(handle)
+import pickle
+with open("/worktmp/khorrami/project_5/video/features/youcook2/yamnet-based/exp4/testing/52/vf_Xception", 'rb') as handle:
+    b = pickle.load(handle)
     
 # # run_analysis.split
 # import pickle
 # with open("/worktmp2/hxkhkh/current/video/features/youcook2/yamnet-based/exp4/testing/1/vf_resnet152", 'rb') as handle:
 #     c = pickle.load(handle)
+
+# for item in test:
+#     for subitem in item:
+#         print(subitem.shape)
+    
