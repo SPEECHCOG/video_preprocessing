@@ -1,4 +1,4 @@
-from train_validate import Train_AVnet
+from train_validate_matchmap import Train_AVnet
 from inspection import Inspection
 #from features import Features
 ###############################################################################
@@ -27,7 +27,7 @@ feature_config = cfg.feature_config
 
 obj = Train_AVnet(model_config , feature_config, training_config)
 [X1shape , X2shape, Yshape] = obj.get_input_shapes()
-obj()
+kh#obj()
 # self = Inspection(model_config , training_config)
 # dict_anns = self()
             
@@ -45,7 +45,7 @@ obj()
 #     c = pickle.load(handle)
 
 # import pickle5 as pickle   
-# with open("/worktmp/khorrami/project_5/video/features/youcook2/yamnet-based/testing/198/af", 'rb') as handle:
+# with open("/worktmp/khorrami/project_5/video/features/youcook2/yamnet-based/testing/0/vf_Xception", 'rb') as handle:
 #     af = pickle.load(handle)
 
 

@@ -61,13 +61,14 @@ def preparY (resnet, len_of_longest_sequence):
         Y[k,len_of_longest_sequence- len(array_clip_trimmed):, :] = array_clip_trimmed   
     return Y
 
-def prepare_triplet_data (audio_features , visual_features):
+def prepare_triplet_data (audio_features , speech_features, visual_features):
     n_samples = len(visual_features)
     orderX,orderY = randOrderTriplet(n_samples)
-    bin_triplet = numpy.array(make_bin_target(n_samples)) 
-    Ydata_triplet = visual_features[orderY]
-    Xdata_triplet = audio_features[orderX]
-    return Ydata_triplet, Xdata_triplet, bin_triplet   
+    target = numpy.array(make_bin_target(n_samples)) 
+    Ydata = visual_features[orderY]
+    X1data = audio_features[orderX]
+    X2data = speech_features[orderX]
+    return Ydata, X1data , X2data, target   
 
 
 
@@ -75,7 +76,7 @@ def prepare_triplet_data (audio_features , visual_features):
 
 def prepare_data (audio_features , speech_features, visual_features , loss, shuffle_data = False):
     if loss =='triplet':
-        Ydata, Xdata, target = prepare_triplet_data (audio_features , visual_features)
+        Ydata, X1data , X2data, target = prepare_triplet_data (audio_features , speech_features, visual_features)
     else:
         n_samples = len(audio_features) 
         target = numpy.ones( n_samples)

@@ -1,5 +1,5 @@
 
-from model import AVnet
+from model_matchmap import AVnet
 
 from utils import triplet_loss,  mms_loss,  prepare_data, preparX, preparY, calculate_recallat10 
 import os
@@ -46,6 +46,7 @@ class Train_AVnet(AVnet):
         self.trainloss_all = []
         self.valloss_all = []
         self.errorclips = {}
+        self.find_recalls = True
         
         
     def initialize_model_outputs(self):
@@ -252,7 +253,7 @@ class Train_AVnet(AVnet):
         return audio_features
     
                     
-    def get_visual_features (self, fetaure_name ):
+    def get_visual_features (self ):
         vf_all = []
         counter_clip = 0
         for video_name, value in self.dict_onsets.items():   
@@ -262,7 +263,7 @@ class Train_AVnet(AVnet):
             vf = self.load_vf()
             # resnet features for each onset (10*2048)
             # now by mistake it is saved as list of n onsets
-            resnet_all = vf[fetaure_name] 
+            resnet_all = vf[self.image_feature_name] 
             resnet = []
             for clip_resnet in resnet_all:
                 if counter_clip not in self.errorclips:
@@ -303,7 +304,7 @@ class Train_AVnet(AVnet):
         
         speech_features_test = self.get_audio_features(self.speech_feature_name) 
         
-        visual_features_test = self.get_visual_features(self.image_feature_name)
+        visual_features_test = self.get_visual_features()
         
         X1shape = numpy.shape(audio_features_test)[1:] 
         X2shape = numpy.shape(speech_features_test)[1:]
@@ -312,7 +313,7 @@ class Train_AVnet(AVnet):
         
             
     def train(self):       
-        self.split = "validation"
+        self.split = "testing"
         self.featuretype = 'yamnet-based'   
         self.load_dict_onsets()
         self.find_error_clips()
@@ -327,14 +328,14 @@ class Train_AVnet(AVnet):
  
         Y, X1, X2, b = prepare_data (audio_features_train , speech_features_train , visual_features_train  , self.loss,  shuffle_data = True)
         del audio_features_train, visual_features_train 
-        history =  self.av_model.fit([Y,X1,X2], b, shuffle=True, epochs=5, batch_size=128)
+        history =  self.av_model.fit([Y,X1,X2], b, shuffle=True, epochs=5, batch_size=120)
         del X1,X2,Y
         self.trainloss = history.history['loss'][0]
 
    
             
     
-    def evaluate(self , find_recalls = True):
+    def evaluate(self):
         
         self.split = "testing" 
         self.featuretype = 'yamnet-based'
@@ -343,23 +344,28 @@ class Train_AVnet(AVnet):
         #APC
         # l = 5
         # audio_features_test = self.produce_apc_features (audio_features_test[:,:-l,:]) 
-        audio_features_test = self.get_audio_features(self.audio_feature_name) 
+        audio_features = self.get_audio_features(self.audio_feature_name) # (N,21,1024)
         
-        speech_features_test = self.get_audio_features(self.speech_feature_name) 
+        speech_features = self.get_audio_features(self.speech_feature_name) # (N, 1000, 40)
         
-        visual_features_test = self.get_visual_features(self.image_feature_name)
+        visual_features = self.get_visual_features(self.image_feature_name) # (N, 10, 7,7, 2048)
         
-        Ytest, X1test, X2test, b_val = prepare_data (audio_features_test , speech_features_test, visual_features_test , self.loss,  shuffle_data = False) 
-        del audio_features_test, speech_features_test, visual_features_test                  
-        self.valloss = self.av_model.evaluate([Ytest,X1test,X2test], b_val, batch_size=128)
-        
+        Y, X1, X2, b = prepare_data (audio_features , speech_features, visual_features , self.loss,  shuffle_data = False) 
+        del audio_features, speech_features, visual_features                  
+        self.valloss = self.av_model.evaluate([Y,X1,X2], b, batch_size=120)
+        history =  self.av_model.fit([Y,X1,X2], b, shuffle=True, epochs=5, batch_size=120)
+        self.trainloss = history.history['loss'][0]
         
         ########### calculating Recall@10 
-        if find_recalls:
-            audio_embeddings = self.audio_embedding_model.predict([X1test, X2test])    
-            visual_embeddings = self.visual_embedding_model.predict(Ytest) 
-            number_of_samples = len(X1test)
-            del X1test,X2test,Ytest
+        if self.find_recalls:
+            audio_embeddings = self.audio_embedding_model.predict([X1, X2])    
+            visual_embeddings = self.visual_embedding_model.predict(Y) 
+            
+            audio_embeddings_mean = numpy.mean(audio_embeddings, axis = 1)
+            visual_embeddings_mean = numpy.mean(visual_embeddings, axis = 1) 
+            
+            number_of_samples = len(X1)
+            del X1,X2,Y
             # audio_embeddings = numpy.squeeze(audio_embeddings)
             # visual_embeddings = numpy.squeeze(visual_embeddings)
             print('checking embedd shape')
@@ -369,8 +375,8 @@ class Train_AVnet(AVnet):
             poolsize =  3206
             number_of_trials = 3
             
-            recall_av_vec = calculate_recallat10( audio_embeddings, visual_embeddings, number_of_trials,  number_of_samples  , poolsize )          
-            recall_va_vec = calculate_recallat10( visual_embeddings , audio_embeddings, number_of_trials,  number_of_samples , poolsize ) 
+            recall_av_vec = calculate_recallat10( audio_embeddings_mean, visual_embeddings_mean, number_of_trials,  number_of_samples  , poolsize )          
+            recall_va_vec = calculate_recallat10( visual_embeddings_mean , audio_embeddings_mean, number_of_trials,  number_of_samples , poolsize ) 
             self.recall10_av = numpy.mean(recall_av_vec)/(poolsize)
             self.recall10_va = numpy.mean(recall_va_vec)/(poolsize)         
             del audio_embeddings, visual_embeddings
@@ -426,13 +432,13 @@ class Train_AVnet(AVnet):
         if self.use_pretrained:
             self.av_model.load_weights(self.outputdir + 'model_weights.h5')
         # this must be called for initial evaluation and getting X,Y dimensions
-        self.evaluate(find_recalls = True)
+        #self.evaluate()
 
         for epoch in range(15):
             print(epoch)
             
-            self.train()
-            self.evaluate(find_recalls = True)
+            #self.train()
+            self.evaluate()
             if self.save_results:
                 self.save_model()
                 self.make_plot()
