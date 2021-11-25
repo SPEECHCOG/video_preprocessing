@@ -211,7 +211,7 @@ class AVnet():
     def build_visual_model (self, Yshape):
         
         dropout_size = 0.3
-        visual_sequence = Input(shape=Yshape) #Yshape = (25,2048)
+        visual_sequence = Input(shape=Yshape) #Yshape = (10,2048)
         
         #resh0 = Reshape([1, visual_sequence.shape[1],visual_sequence.shape[2]],name='reshape_visual')(visual_sequence) 
         # forward_visual = Conv1D(1024,3,strides=1,padding = "same", activation='relu', name = 'conv_visual')(visual_sequence)
@@ -278,7 +278,7 @@ class AVnet():
         if self.loss == "triplet":
             
             mapIA = dot([gatedV,gatedA],axes=-1,normalize = True,name='dot_matchmap')       
-            final_model = Model(inputs=[visual_sequence, audio_sequence], outputs = mapIA )
+            final_model = Model(inputs=[visual_sequence, [audio_sequence , speech_sequence]], outputs = mapIA )
             final_model.compile(loss=triplet_loss, optimizer= Adam(lr=1e-04))
             
         elif self.loss == "MMS":

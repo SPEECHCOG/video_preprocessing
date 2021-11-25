@@ -143,7 +143,14 @@ class Train_AVnet(AVnet):
         for key_to_be_deleted in self.error_list:
             self.dict_onsets.pop(key_to_be_deleted)  
         
-        
+    def chunk_data (self, lower, upper):
+        self.dict_onsets_chunk = {}
+        for video_name, value in self.dict_onsets.items():   
+            self.video_name = video_name
+            self.folder_name = value['folder_name']        
+            if self.folder_name > lower and self.folder_name < upper :
+                self.dict_onsets_chunk[video_name] = value   
+        self.dict_onsets = self.dict_onsets_chunk        
     
 
     def load_af (self):       
@@ -315,26 +322,27 @@ class Train_AVnet(AVnet):
         self.split = "validation"
         self.featuretype = 'yamnet-based'   
         self.load_dict_onsets()
+        self.chunk_data (0, 100)
         self.find_error_clips()
         #APC
         #audio_features_train = self.produce_apc_features (audio_features_train[:,:-5,:]) 
         
-        audio_features_train = self.get_audio_features(self.audio_feature_name) 
+        audio_features = self.get_audio_features(self.audio_feature_name) 
         
-        speech_features_train = self.get_audio_features(self.speech_feature_name) 
+        speech_features = self.get_audio_features(self.speech_feature_name) 
         
-        visual_features_train = self.get_visual_features(self.image_feature_name)
+        visual_features= self.get_visual_features(self.image_feature_name)
  
-        Y, X1, X2, b = prepare_data (audio_features_train , speech_features_train , visual_features_train  , self.loss,  shuffle_data = True)
-        del audio_features_train, visual_features_train 
-        history =  self.av_model.fit([Y,X1,X2], b, shuffle=True, epochs=5, batch_size=128)
+        Y, X1, X2, b = prepare_data (audio_features , speech_features , visual_features  , self.loss,  shuffle_data = True)
+        del audio_features, speech_features , visual_features 
+        history =  self.av_model.fit([Y,X1,X2], b, shuffle=True, epochs=5, batch_size=120)
         del X1,X2,Y
         self.trainloss = history.history['loss'][0]
 
    
             
     
-    def evaluate(self , find_recalls = True):
+    def evaluate(self , find_recalls = False):
         
         self.split = "testing" 
         self.featuretype = 'yamnet-based'
@@ -351,7 +359,7 @@ class Train_AVnet(AVnet):
         
         Ytest, X1test, X2test, b_val = prepare_data (audio_features_test , speech_features_test, visual_features_test , self.loss,  shuffle_data = False) 
         del audio_features_test, speech_features_test, visual_features_test                  
-        self.valloss = self.av_model.evaluate([Ytest,X1test,X2test], b_val, batch_size=128)
+        self.valloss = self.av_model.evaluate([Ytest,X1test,X2test], b_val, batch_size=120)
         
         
         ########### calculating Recall@10 
@@ -426,13 +434,13 @@ class Train_AVnet(AVnet):
         if self.use_pretrained:
             self.av_model.load_weights(self.outputdir + 'model_weights.h5')
         # this must be called for initial evaluation and getting X,Y dimensions
-        self.evaluate(find_recalls = True)
+        self.evaluate(find_recalls = False)
 
         for epoch in range(15):
             print(epoch)
             
             self.train()
-            self.evaluate(find_recalls = True)
+            self.evaluate(find_recalls = False)
             if self.save_results:
                 self.save_model()
                 self.make_plot()

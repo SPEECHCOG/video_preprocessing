@@ -6,7 +6,7 @@ from tensorflow.keras.layers import Lambda
 
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import  Input, Reshape, Dense, Dropout, BatchNormalization, dot, Softmax, Permute, UpSampling1D, Masking
-from tensorflow.keras.layers import  MaxPooling1D, MaxPooling2D, AveragePooling1D,  Conv1D, Concatenate, ReLU, Add, Multiply, GRU
+from tensorflow.keras.layers import  MaxPooling1D, MaxPooling2D, MaxPooling3D, AveragePooling1D,  Conv1D, Conv3D, Concatenate, ReLU, Add, Multiply, GRU
 from tensorflow.keras.optimizers import Adam
 
 
@@ -105,16 +105,15 @@ class AVnet():
         speech_sequence = Input(shape=X2shape) #X2shape = (1000, 40)
         
         # audio channel
-        audio_sequence_masked = Masking (mask_value=0., input_shape=X1shape)(audio_sequence)
-        strd = 2
+        # audio_sequence_masked = Masking (mask_value=0., input_shape=X1shape)(audio_sequence)
+        # strd = 2
         
-        a0 = Conv1D(1024,1,strides = 1, padding="same")(audio_sequence_masked)
-        a0 = BatchNormalization(axis=-1)(a0)
-        a0 = ReLU()(a0) #(21,1024)
+        # a0 = Conv1D(512,1,strides = 1, padding="same")(audio_sequence_masked)
+        # a0 = BatchNormalization(axis=-1)(a0)
+        # a0 = ReLU()(a0) #(21,1024)
         
-        out_sound_channel = UpSampling1D(3, name = 'upsampling_sound')(a0)
-        #out_sound_channel = Reshape([out_sound_channel.shape[2]])(out_sound_channel)  #(N, 1024)
-        out_sound_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_sound')(out_sound_channel)
+        # out_sound_channel = UpSampling1D(3, name = 'upsampling_sound')(a0)
+        # out_sound_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_sound')(out_sound_channel)
         
         # speech channel
         speech_sequence_masked = Masking(mask_value=0., input_shape=X2shape)(speech_sequence)
@@ -165,33 +164,16 @@ class AVnet():
         out = Add()([downsample,x2])
         out_4 = ReLU()(out)   # (64, 1024)  
         
-        #self attention
-        # input_attention = out_4
-        # query = input_attention
-        # key = input_attention
-        # value = Permute((2,1))(input_attention)
+        #out_speech_channel = out_4
+        out_speech_channel  = AveragePooling1D(64,padding='same')(out_4) 
+        out_speech_channel = Reshape([out_speech_channel.shape[2]])(out_speech_channel) 
         
-        # score = dot([query,key], normalize=False, axes=-1,name='scoreA')
-        # scaled_score = score/int(query.shape[1])
-        # weight = Softmax(name ='weigthA')(scaled_score)
-        # attention = dot([weight, value], normalize=False, axes=-1,name='attentionA')
-        
-        # poolAtt = AveragePooling1D(64, padding='same')(attention) # N, 1, 1024
-        
-        # poolquery = AveragePooling1D(64, padding='same')(query)# N, 1, 1024
-        
-        # outAtt = Concatenate(axis=-1)([poolAtt, poolquery])
-        # outAtt = Reshape([2048],name='reshape_out_attA')(outAtt)
-        # out_audio_channel = outAtt
-        #out_4 = Masking (mask_value=0., input_shape=out_4.shape[1:]) (out_4)
-        
-        out_speech_channel = out_4
           
         out_speech_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_speech')(out_speech_channel)
         
         # combining sound and speech branches
-        out_audio_channel = Concatenate(axis=-1)([out_sound_channel, out_speech_channel])
-        
+        #out_audio_channel = Concatenate(axis=-1)([out_sound_channel, out_speech_channel])
+        out_audio_channel = out_speech_channel
         
         audio_model = Model(inputs= [audio_sequence, speech_sequence], outputs = out_audio_channel )
         #audio_model.summary()
@@ -201,37 +183,22 @@ class AVnet():
         
         dropout_size = 0.3
         visual_sequence = Input(shape=Yshape) #Yshape = (10,7,7,2048)
+        visual_sequence_norm = BatchNormalization(axis=-1, name = 'bn0_visual')(visual_sequence)
         
-        #resh0 = Reshape([1, visual_sequence.shape[1],visual_sequence.shape[2]],name='reshape_visual')(visual_sequence) 
-        # forward_visual = Conv1D(1024,3,strides=1,padding = "same", activation='relu', name = 'conv_visual')(visual_sequence)
-        # dr_visual = Dropout(dropout_size,name = 'dr_visual')(forward_visual)
-        # bn_visual = BatchNormalization(axis=-1,name = 'bn1_visual')(dr_visual)
+        forward_visual = Conv3D(1024,(1,3,3),strides=(1,1,1),padding = "same", activation='linear', name = 'conv_visual')(visual_sequence_norm)
+        dr_visual = Dropout(dropout_size,name = 'dr_visual')(forward_visual)
+        bn_visual = BatchNormalization(axis=-1,name = 'bn1_visual')(dr_visual)
         
-        visual_sequence_reshaped = Reshape([ visual_sequence.shape[1] ,visual_sequence.shape[2]*visual_sequence.shape[3], visual_sequence.shape[4]],name='reshape_visual')(visual_sequence) 
-        visual_sequence_reshaped.shape
-        ##self attention
-        # input_attention = bn_visual
-        # query = input_attention
-        # key = input_attention
-        # value = Permute((2,1))(input_attention)
-        
-        # score = dot([query,key], normalize=False, axes=-1,name='scoreV')
-        # scaled_score = score/int(query.shape[1])
-        # weight = Softmax(name='weigthV')(scaled_score)
-        # attention = dot([weight, value], normalize=False, axes=-1,name='attentionV')
-        
-        # poolAtt = AveragePooling1D(10, padding='same')(attention) # N, 1, 1024
-        
-        # poolquery = AveragePooling1D(10, padding='same')(query)# N, 1, 1024
-        
-        # outAtt = Concatenate(axis=-1)([poolAtt, poolquery])
-        # outAtt = Reshape([2048],name='reshape_out_attV')(outAtt)
-        # out_visual_channel = outAtt
+        # input_reshape = bn_visual
+        # visual_sequence_reshaped = Reshape([ input_reshape.shape[1] ,input_reshape.shape[2]*input_reshape.shape[3], input_reshape.shape[4]], name='reshape_visual')(input_reshape) 
+        # visual_sequence_reshaped.shape
         
         #max pooling
-        pool_visual = MaxPooling2D((10,1),padding='same')(visual_sequence_reshaped)
-        out_visual_channel = Reshape([pool_visual.shape[2], pool_visual.shape[3]])(pool_visual)
-        
+        # pool_visual = MaxPooling2D((10,1),padding='same')(visual_sequence_reshaped)
+        # out_visual_channel = Reshape([pool_visual.shape[2], pool_visual.shape[3]])(pool_visual)
+
+        pool_visual = MaxPooling3D((10,7,7),padding='same')(bn_visual)
+        out_visual_channel = Reshape( [pool_visual.shape[-1]])(pool_visual)        
         
         out_visual_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_visual')(out_visual_channel)
         
@@ -257,20 +224,19 @@ class AVnet():
         
         mapIA = dot([V,A],axes=-1,normalize = True,name='dot_matchmap') 
         
-        def final_layer(tensor):
-            x= tensor 
-            score = K.mean( (K.mean(x, axis=1)), axis=-1)        
-            output_score = Reshape([1],name='reshape_final')(score)          
-            return output_score
+        # def final_layer(tensor):
+        #     x= tensor 
+        #     score = K.mean( (K.max(x, axis=1)), axis=-1)        
+        #     output_score = Reshape([1],name='reshape_final')(score)          
+        #     return output_score
         
-        lambda_layer = Lambda(final_layer, name="final_layer")(mapIA) 
+        # lambda_layer = Lambda(final_layer, name="final_layer")(mapIA) 
         
         # s_output = Concatenate(axis=1)([Reshape([1 , V.shape[1]])(V) ,  Reshape([1 ,A.shape[1]])(A)])
         
-        final_model = Model(inputs=[visual_sequence, [audio_sequence , speech_sequence ]], outputs = lambda_layer )
-        final_model.compile(loss=triplet_loss, optimizer= Adam(lr=1e-04))
+        final_model = Model(inputs=[visual_sequence, [audio_sequence , speech_sequence ]], outputs = mapIA)
+        final_model.compile(loss=triplet_loss, optimizer = Adam(lr=1e-04))
         final_model.summary()
-
 
         # return final_model, visual_embedding_model, audio_embedding_model        
           

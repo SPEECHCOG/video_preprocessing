@@ -115,7 +115,7 @@ def calculate_recallat10( embedding_1,embedding_2, sampling_times, number_of_all
     
 
 def triplet_loss(y_true,y_pred):    
-    margin = 0.1
+    margin = 0.2
     penalty_factor = 1
     # penalty factor might speed up training or improve its quality 
     # since it asks the system to penalize the more unsimilar pairs more than less unsimilar ones
