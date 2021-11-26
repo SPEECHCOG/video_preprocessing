@@ -208,15 +208,15 @@ class Analysis:
         for video_name, value in dict_onsets.items(): 
             self.video_name = video_name
             self.folder_name = value['folder_name']
-            if self.folder_name > 282:
-                self.accepted_onsets_second = value['onsets']            
-                cap = self.load_video ()
-                if self.save_visual_features:
-                    vf_video = self.find_video_features(cap)
-                    self.save_per_video( vf_video)
-                if self.save_images:
-                    self.write_clip_images(cap)
-                    
-                #self.counter += 1 
-                print(self.folder_name)
+            
+            self.accepted_onsets_second = value['onsets']            
+            cap = self.load_video ()
+            if self.save_visual_features:
+                vf_video = self.find_video_features(cap)
+                self.save_per_video( vf_video)
+            if self.save_images:
+                self.write_clip_images(cap)
+                
+            #self.counter += 1 
+            print(self.folder_name)
 
