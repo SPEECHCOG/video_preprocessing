@@ -1,8 +1,8 @@
 
 training_config = {  
-  "featuredir": "../../features/youcook2/",
+  "featuredir": "../../../features/youcook2/",
   "featuretype": "ann-based",
-  "outputdir": "../../model/youcook2/",
+  "outputdir": "../../../model/youcook2/",
   "dataset": "YOUCOOK2",
   "use_pretrained": False,
   "save_results" : True,
@@ -14,7 +14,7 @@ model_config = {
     "visual_model_name": "resnet152", 
     "visual_layer_name": "avg_pool",
     
-    "loss" : "MMS", 
+    "loss" : "triplet", 
     "clip_length" : 10
 }
 

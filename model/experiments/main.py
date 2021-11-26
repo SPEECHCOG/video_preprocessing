@@ -1,5 +1,5 @@
-from train_validate import Train_AVnet
-from inspection import Inspection
+from train_validate_matchmap import Train_AVnet
+# from inspection import Inspection
 #from features import Features
 ###############################################################################
 
@@ -26,9 +26,9 @@ feature_config = cfg.feature_config
 ###############################################################################
 
 obj = Train_AVnet(model_config , feature_config, training_config)
-[X1shape , X2shape, Yshape] = obj.get_input_shapes()
-visual_embedding_model, audio_embedding_model, final_model = obj.build_network( X1shape , X2shape , Yshape)
-#
+#[X1shape , X2shape, Yshape] = obj.get_input_shapes()
+# visual_embedding_model, audio_embedding_model, final_model = obj.build_network( X1shape , X2shape , Yshape)
+# #
 obj()
 # self = Inspection(model_config , training_config)
 # dict_anns = self()

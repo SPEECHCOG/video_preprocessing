@@ -206,7 +206,7 @@ class Train_AVnet(AVnet):
             self.folder_name = value['folder_name']                     
             self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name))      
             af = self.load_af()            
-            logmel_all = af['logmel64'] 
+            logmel_all = af['logmel40'] 
             logmel = []
             for clip_logmel in logmel_all:
                 if counter_clip not in self.errorclips:
@@ -300,7 +300,7 @@ class Train_AVnet(AVnet):
         audio_features_train = self.get_audio_features()
         Y,X,b = prepare_data (audio_features_train , visual_features_train  , self.loss,  shuffle_data = True)
         del audio_features_train, visual_features_train 
-        history =  self.av_model.fit([Y,X], b, shuffle=True, epochs=5, batch_size=128)
+        history =  self.av_model.fit([Y,X], b, shuffle=False, epochs=2, batch_size=120)
         del X,Y
         self.trainloss = history.history['loss'][0]
 
@@ -316,12 +316,11 @@ class Train_AVnet(AVnet):
         #APC
         # l = 5
         # audio_features_test = self.produce_apc_features (audio_features_test[:,:-l,:])           
-        visual_features_test = self.get_visual_features()
-        
-        audio_features_test = self.get_audio_features() 
-        Ytest, Xtest, b_val = prepare_data (audio_features_test , visual_features_test , self.loss,  shuffle_data = True) 
-        del audio_features_test, visual_features_test                  
-        self.valloss = self.av_model.evaluate([Ytest,Xtest], b_val, batch_size=128)
+        visual_features = self.get_visual_features()     
+        audio_features = self.get_audio_features() 
+        Ytest, Xtest, b_val = prepare_data (audio_features , visual_features , self.loss,  shuffle_data = True) 
+        del audio_features, visual_features                  
+        self.valloss = self.av_model.evaluate([Ytest,Xtest], b_val, batch_size=120)
         
         
         ########### calculating Recall@10 
@@ -395,13 +394,13 @@ class Train_AVnet(AVnet):
         
         self.initialize_model_outputs()
         # this must be called for initial evaluation and getting X,Y dimensions
-        self.evaluate(find_recalls = True)
+        self.evaluate(find_recalls = False)
 
         for epoch in range(15):
             print(epoch)
             
             self.train()
-            self.evaluate(find_recalls = True)
+            self.evaluate(find_recalls = False)
             if self.save_results:
                 self.save_model()
                 self.make_plot()

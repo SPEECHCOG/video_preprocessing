@@ -95,12 +95,12 @@ class AVnet():
         forward5 = Conv1D(1024,17,padding="same",activation=activation_C,name = 'conv5')(pool4)
         dr5 = Dropout(dropout_size)(forward5)
         bn5 = BatchNormalization(axis=-1,name='audio_branch')(dr5) 
-        pool5 = MaxPooling1D(500,padding='same')(bn5)
+        pool5 = MaxPooling1D(64,padding='same')(bn5)
         
         out_audio_channel = pool5
         out_audio_channel = Reshape([pool5.shape[2]],name='reshape_audio')(out_audio_channel) 
         audio_model = Model(inputs= audio_sequence, outputs = out_audio_channel )
-        #audio_model.summary()
+        audio_model.summary()
         return audio_sequence , out_audio_channel , audio_model
 
     def build_resDAVEnet (self, Xshape):     
@@ -109,7 +109,7 @@ class AVnet():
         audio_sequence_masked = Masking (mask_value=0., input_shape=Xshape)(audio_sequence)
         strd = 2
         
-        x0 = Conv1D(128,1,strides = 1, padding="same")(audio_sequence_masked)
+        x0 = Conv1D(128,1,strides = 1, padding="same")(audio_sequence)
         x0 = BatchNormalization(axis=-1)(x0)
         x0 = ReLU()(x0) 
           
@@ -176,26 +176,26 @@ class AVnet():
         
         # poling
         
-        out_audio_channel  = AveragePooling1D(512,padding='same')(out_4) 
+        out_audio_channel  = AveragePooling1D(64,padding='same')(out_4) 
         out_audio_channel = Reshape([out_audio_channel.shape[2]])(out_audio_channel) 
         
-        out_audio_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_audio')(out_audio_channel)
+        #out_audio_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_audio')(out_audio_channel)
         
         audio_model = Model(inputs= audio_sequence, outputs = out_audio_channel )
-        #audio_model.summary()
+        audio_model.summary()
         return audio_sequence , out_audio_channel , audio_model   
      
     def build_visual_model (self, Yshape):
         
         dropout_size = 0.3
-        visual_sequence = Input(shape=Yshape) #Yshape = (25,2048)
+        visual_sequence = Input(shape=Yshape) #Yshape = (10,2048)
         
-        #resh0 = Reshape([1, visual_sequence.shape[1],visual_sequence.shape[2]],name='reshape_visual')(visual_sequence) 
-        # forward_visual = Conv1D(1024,3,strides=1,padding = "same", activation='relu', name = 'conv_visual')(visual_sequence)
-        # dr_visual = Dropout(dropout_size,name = 'dr_visual')(forward_visual)
-        # bn_visual = BatchNormalization(axis=-1,name = 'bn1_visual')(dr_visual)
+        resh0 = Reshape([1, visual_sequence.shape[1],visual_sequence.shape[2]],name='reshape_visual')(visual_sequence) 
+        forward_visual = Conv1D(1024,3,strides=1,padding = "same", activation='relu', name = 'conv_visual')(visual_sequence)
+        dr_visual = Dropout(dropout_size,name = 'dr_visual')(forward_visual)
+        bn_visual = BatchNormalization(axis=-1,name = 'bn1_visual')(dr_visual)
         
-        bn_visual = visual_sequence
+        #bn_visual = visual_sequence
         
         ##self attention
         # input_attention = bn_visual
@@ -217,14 +217,14 @@ class AVnet():
         # out_visual_channel = outAtt
         
         #max pooling
-        pool_visual = MaxPooling1D(50,padding='same')(bn_visual)
+        pool_visual = MaxPooling1D(10,padding='same')(bn_visual)
         out_visual_channel = Reshape([pool_visual.shape[2]])(pool_visual)
         
         
-        out_visual_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_visual')(out_visual_channel)
+        #out_visual_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_visual')(out_visual_channel)
         
         visual_model = Model(inputs= visual_sequence, outputs = out_visual_channel )
-        #visual_model.summary()
+        visual_model.summary()
         return visual_sequence , out_visual_channel , visual_model
 
      
@@ -249,12 +249,12 @@ class AVnet():
         gatedA_2 = Dense(gate_size,activation = 'sigmoid', name = "a2")(gatedA_1)        
         gatedA = Multiply(name= 'multiplyA')([gatedA_1, gatedA_2])
         
-        visual_embedding_model = Model(inputs=visual_sequence, outputs = gatedV, name='visual_embedding_model')
-        audio_embedding_model = Model(inputs=audio_sequence, outputs = gatedA, name='audio_embedding_model')
+        visual_embedding_model = Model(inputs=visual_sequence, outputs = V, name='visual_embedding_model')
+        audio_embedding_model = Model(inputs=audio_sequence, outputs = A, name='audio_embedding_model')
         
         if self.loss == "triplet":
             
-            mapIA = dot([gatedV,gatedA],axes=-1,normalize = True,name='dot_matchmap')       
+            mapIA = dot([V,A],axes=-1,normalize = True,name='dot_matchmap')       
             final_model = Model(inputs=[visual_sequence, audio_sequence], outputs = mapIA )
             final_model.compile(loss=triplet_loss, optimizer= Adam(lr=1e-04))
             
@@ -263,7 +263,7 @@ class AVnet():
             final_model = Model(inputs=[visual_sequence, audio_sequence], outputs = s_output )
             final_model.compile(loss=mms_loss, optimizer= Adam(lr=1e-03))
     
-        #final_model.summary()
+        final_model.summary()
     
         return visual_embedding_model,audio_embedding_model,final_model
 

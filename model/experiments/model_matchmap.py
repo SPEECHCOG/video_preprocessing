@@ -1,6 +1,5 @@
 
-from utils import triplet_loss,  mms_loss,  prepare_data, preparX, preparY, calculate_recallat10 
-
+from utils import triplet_loss,  my_mms_loss
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Lambda
 
@@ -164,9 +163,9 @@ class AVnet():
         out = Add()([downsample,x2])
         out_4 = ReLU()(out)   # (64, 1024)  
         
-        #out_speech_channel = out_4
-        out_speech_channel  = AveragePooling1D(64,padding='same')(out_4) 
-        out_speech_channel = Reshape([out_speech_channel.shape[2]])(out_speech_channel) 
+        out_speech_channel = out_4
+        # out_speech_channel  = AveragePooling1D(64,padding='same')(out_4) 
+        # out_speech_channel = Reshape([out_speech_channel.shape[2]])(out_speech_channel) 
         
           
         out_speech_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_speech')(out_speech_channel)
@@ -176,7 +175,7 @@ class AVnet():
         out_audio_channel = out_speech_channel
         
         audio_model = Model(inputs= [audio_sequence, speech_sequence], outputs = out_audio_channel )
-        #audio_model.summary()
+        audio_model.summary()
         return audio_sequence , speech_sequence  , out_audio_channel , audio_model   
      
     def build_visual_model (self, Yshape):
@@ -189,21 +188,23 @@ class AVnet():
         dr_visual = Dropout(dropout_size,name = 'dr_visual')(forward_visual)
         bn_visual = BatchNormalization(axis=-1,name = 'bn1_visual')(dr_visual)
         
-        # input_reshape = bn_visual
-        # visual_sequence_reshaped = Reshape([ input_reshape.shape[1] ,input_reshape.shape[2]*input_reshape.shape[3], input_reshape.shape[4]], name='reshape_visual')(input_reshape) 
+        
+        # 
         # visual_sequence_reshaped.shape
         
         #max pooling
         # pool_visual = MaxPooling2D((10,1),padding='same')(visual_sequence_reshaped)
         # out_visual_channel = Reshape([pool_visual.shape[2], pool_visual.shape[3]])(pool_visual)
-
-        pool_visual = MaxPooling3D((10,7,7),padding='same')(bn_visual)
-        out_visual_channel = Reshape( [pool_visual.shape[-1]])(pool_visual)        
         
+        pool_visual = MaxPooling3D((10,1,1),padding='same')(bn_visual)
+        input_reshape = pool_visual
+        out_visual_channel = Reshape([input_reshape.shape[2]*input_reshape.shape[3],
+                                                                 input_reshape.shape[4]], name='reshape_visual')(input_reshape)    
+        out_visual_channel.shape
         out_visual_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_visual')(out_visual_channel)
         
         visual_model = Model(inputs= visual_sequence, outputs = out_visual_channel )
-        #visual_model.summary()
+        visual_model.summary()
         return visual_sequence , out_visual_channel , visual_model
 
      
@@ -216,54 +217,35 @@ class AVnet():
             audio_sequence , out_audio_channel , audio_model = self.build_simple_audio_model (X1shape , X2shape)
         
         
-        V = out_visual_channel
-        A = out_audio_channel
+        V = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_visual-final') (out_visual_channel)
+        A = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_audio-final') (out_audio_channel)
         
         visual_embedding_model = Model(inputs=visual_sequence, outputs= V, name='visual_embedding_model')
         audio_embedding_model = Model(inputs=[audio_sequence , speech_sequence],outputs= A, name='visual_embedding_model')
-        
-        mapIA = dot([V,A],axes=-1,normalize = True,name='dot_matchmap') 
-        
-        # def final_layer(tensor):
-        #     x= tensor 
-        #     score = K.mean( (K.max(x, axis=1)), axis=-1)        
-        #     output_score = Reshape([1],name='reshape_final')(score)          
-        #     return output_score
-        
-        # lambda_layer = Lambda(final_layer, name="final_layer")(mapIA) 
-        
-        # s_output = Concatenate(axis=1)([Reshape([1 , V.shape[1]])(V) ,  Reshape([1 ,A.shape[1]])(A)])
-        
-        final_model = Model(inputs=[visual_sequence, [audio_sequence , speech_sequence ]], outputs = mapIA)
-        final_model.compile(loss=triplet_loss, optimizer = Adam(lr=1e-04))
-        final_model.summary()
+  
+        if self.loss == "triplet":  
+            def final_layer(tensor):
+                x= tensor 
+                score = K.mean( (K.max(x, axis=1)), axis=-1)        
+                output_score = Reshape([1],name='reshape_final')(score)          
+                return output_score
+            mapIA = dot([V,A],axes=-1,normalize = True,name='dot_matchmap') 
+            lambda_layer = Lambda(final_layer, name="final_layer")(mapIA)              
+            final_model = Model(inputs=[visual_sequence, [audio_sequence , speech_sequence ]], outputs = lambda_layer)
+            final_model.compile(loss=triplet_loss, optimizer = Adam(lr=1e-04))
 
-        # return final_model, visual_embedding_model, audio_embedding_model        
-          
-        # gate_size = 4096
-        # gatedV_1 = Dense(gate_size, name = "v1")(V)
-        # gatedV_2 = Dense(gate_size,activation = 'sigmoid', name = "v2")(gatedV_1)        
-        # gatedV = Multiply(name= 'multiplyV')([gatedV_1, gatedV_2])
-
-        # gatedA_1 = Dense(gate_size, name = "a1")(A)
-        # gatedA_2 = Dense(gate_size,activation = 'sigmoid', name = "a2")(gatedA_1)        
-        # gatedA = Multiply(name= 'multiplyA')([gatedA_1, gatedA_2])
-        
-        # visual_embedding_model = Model(inputs=visual_sequence, outputs = gatedV, name='visual_embedding_model')
-        # audio_embedding_model = Model(inputs=[audio_sequence , speech_sequence], outputs = gatedA, name='audio_embedding_model')
-        
-        # if self.loss == "triplet":
             
-        #     mapIA = dot([gatedV,gatedA],axes=-1,normalize = True,name='dot_matchmap')       
-        #     final_model = Model(inputs=[visual_sequence, audio_sequence], outputs = mapIA )
-        #     final_model.compile(loss=triplet_loss, optimizer= Adam(lr=1e-04))
+        elif self.loss == "MMS":
+            #s_output = Concatenate(axis=1)([Reshape([1 , V.shape[1], V.shape[2]])(V) ,  Reshape([1 ,A.shape[1], A.shape[2]])(A)])
+            # def final_layer(input_tensor):
+            #     return input_tensor
             
-        # elif self.loss == "MMS":
-        #     
-        #     final_model = Model(inputs=[visual_sequence, [audio_sequence , speech_sequence]], outputs = s_output )
-        #     final_model.compile(loss=mms_loss, optimizer= Adam(lr=1e-03))
+            # lambda_layer = Lambda(final_layer , name="final_layer" ) ([V,A])     #lambda x,y: [x,y]  
+            final_model = Model(inputs=[visual_sequence, [audio_sequence , speech_sequence]], outputs = [V,A])
+            final_model.summary()
+            final_model.compile(loss=my_mms_loss , optimizer= Adam(lr=1e-03)) # loss={'lambda_visual':mms_loss, 'lambda_speech':mms_loss}
     
-        #final_model.summary()
+        
     
         return visual_embedding_model,audio_embedding_model,final_model
 

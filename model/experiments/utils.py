@@ -115,7 +115,7 @@ def calculate_recallat10( embedding_1,embedding_2, sampling_times, number_of_all
     
 
 def triplet_loss(y_true,y_pred):    
-    margin = 0.2
+    margin = 0.1
     penalty_factor = 1
     # penalty factor might speed up training or improve its quality 
     # since it asks the system to penalize the more unsimilar pairs more than less unsimilar ones
@@ -130,23 +130,20 @@ def triplet_loss(y_true,y_pred):
     return K.sum(penalty_factor * K.maximum(0.0,(Sc-Sp + margin )) + penalty_factor * K.maximum(0.0,(Si-Sp + margin )),  axis=0) 
 
 
-def mms_loss(y_true , y_pred): 
-    
-    
-    print('this is y_true')
-    print(y_true.shape)
+def my_mms_loss(y_true , y_pred ): 
     
     
     print('this is y_pred')
     print(y_pred.shape)
     
-    out_visual = y_pred [:,0,:]
-    out_audio = y_pred [:,1,:]
+    out_visual , out_audio = y_pred
+    
+    # out_visual = y_pred [:,0,:]
+    # out_audio = y_pred [:,1,:]
+    
+    # print('this isout_visual before expand dim')
+    # print(out_visual.shape)
 
-    print('this isout_visual before expand dim')
-    print(out_visual.shape)
-    out_visual = y_pred [:,0,:]
-    out_audio = y_pred [:,1,:]
     out_visual = K.expand_dims(out_visual, 0)
     out_audio = K.expand_dims(out_audio, 0)
 

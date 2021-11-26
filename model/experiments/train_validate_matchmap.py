@@ -1,7 +1,7 @@
 
 from model_matchmap import AVnet
 
-from utils import triplet_loss,  mms_loss,  prepare_data, preparX, preparY, calculate_recallat10 
+from utils import prepare_data, preparX, preparY, calculate_recallat10 
 import os
 import scipy.io
 #import pickle  # for video env
@@ -46,7 +46,7 @@ class Train_AVnet(AVnet):
         self.trainloss_all = []
         self.valloss_all = []
         self.errorclips = {}
-        self.find_recalls = False
+        self.find_recalls = True
         
         
     def initialize_model_outputs(self):
@@ -321,10 +321,10 @@ class Train_AVnet(AVnet):
         
             
     def train(self):       
-        self.split = "testing"
+        self.split = "validation"
         self.featuretype = 'yamnet-based'   
         self.load_dict_onsets()
-        #self.chunk_data (0, 100)
+        self.chunk_data (0, 100)
         self.find_error_clips()
         
         audio_features_train = self.get_audio_features(self.audio_feature_name)        
@@ -333,40 +333,56 @@ class Train_AVnet(AVnet):
  
         Y, X1, X2, b = prepare_data (audio_features_train , speech_features_train , visual_features_train  , self.loss,  shuffle_data = True)
         del audio_features_train, speech_features_train, visual_features_train 
-        history =  self.av_model.fit([Y,X1,X2], b, shuffle=True, epochs=2, batch_size=120)
+        
+        history =  self.av_model.fit([Y,X1,X2], b, shuffle=False, epochs=2 , batch_size=120)
+        
         del X1,X2,Y
         self.trainloss = history.history['loss'][0]
         
         # ... chunk 2
-        # self.load_dict_onsets()
-        # self.chunk_data (100, 200)
-        # self.find_error_clips()
+        self.load_dict_onsets()
+        self.chunk_data (100, 200)
+        self.find_error_clips()
         
-        # audio_features_train = self.get_audio_features(self.audio_feature_name)        
-        # speech_features_train = self.get_audio_features(self.speech_feature_name)        
-        # visual_features_train = self.get_visual_features()
+        audio_features_train = self.get_audio_features(self.audio_feature_name)        
+        speech_features_train = self.get_audio_features(self.speech_feature_name)        
+        visual_features_train = self.get_visual_features()
  
-        # Y, X1, X2, b = prepare_data (audio_features_train , speech_features_train , visual_features_train  , self.loss,  shuffle_data = True)
-        # del audio_features_train, speech_features_train, visual_features_train 
-        # history =  self.av_model.fit([Y,X1,X2], b, shuffle=True, epochs=2, batch_size=120)
-        # del X1,X2,Y
-        # self.trainloss = history.history['loss'][0]        
+        Y, X1, X2, b = prepare_data (audio_features_train , speech_features_train , visual_features_train  , self.loss,  shuffle_data = True)
+        del audio_features_train, speech_features_train, visual_features_train 
+        history =  self.av_model.fit([Y,X1,X2], b, shuffle=False, epochs=2, batch_size=120)
+        del X1,X2,Y
+        self.trainloss = history.history['loss'][0]        
 
-        # # ... chunk 3
-        # self.load_dict_onsets()
-        # self.chunk_data (200, 300)
-        # self.find_error_clips()
+        # ... chunk 3
+        self.load_dict_onsets()
+        self.chunk_data (200, 300)
+        self.find_error_clips()
         
-        # audio_features_train = self.get_audio_features(self.audio_feature_name)        
-        # speech_features_train = self.get_audio_features(self.speech_feature_name)        
-        # visual_features_train = self.get_visual_features()
+        audio_features_train = self.get_audio_features(self.audio_feature_name)        
+        speech_features_train = self.get_audio_features(self.speech_feature_name)        
+        visual_features_train = self.get_visual_features()
  
-        # Y, X1, X2, b = prepare_data (audio_features_train , speech_features_train , visual_features_train  , self.loss,  shuffle_data = True)
-        # del audio_features_train, speech_features_train, visual_features_train 
-        # history =  self.av_model.fit([Y,X1,X2], b, shuffle=True, epochs=2, batch_size=120)
-        # del X1,X2,Y
-        # self.trainloss = history.history['loss'][0]             
-   
+        Y, X1, X2, b = prepare_data (audio_features_train , speech_features_train , visual_features_train  , self.loss,  shuffle_data = True)
+        del audio_features_train, speech_features_train, visual_features_train 
+        history =  self.av_model.fit([Y,X1,X2], b, shuffle=False, epochs=2, batch_size=120)
+        del X1,X2,Y
+        self.trainloss = history.history['loss'][0]             
+
+        # ... chunk 3
+        self.load_dict_onsets()
+        self.chunk_data (300, 400)
+        self.find_error_clips()
+        
+        audio_features_train = self.get_audio_features(self.audio_feature_name)        
+        speech_features_train = self.get_audio_features(self.speech_feature_name)        
+        visual_features_train = self.get_visual_features()
+ 
+        Y, X1, X2, b = prepare_data (audio_features_train , speech_features_train , visual_features_train  , self.loss,  shuffle_data = True)
+        del audio_features_train, speech_features_train, visual_features_train 
+        history =  self.av_model.fit([Y,X1,X2], b, shuffle=False, epochs=2, batch_size=120)
+        del X1,X2,Y
+        self.trainloss = history.history['loss'][0]   
             
     
     def evaluate(self):
@@ -386,28 +402,31 @@ class Train_AVnet(AVnet):
         visual_features = self.get_visual_features() # (N, 10, 7,7, 2048)
         
         Y, X1, X2, b = prepare_data (audio_features , speech_features, visual_features , self.loss,  shuffle_data = False) 
-        del audio_features, speech_features, visual_features                  
+        #del audio_features, speech_features, visual_features                  
         self.valloss = self.av_model.evaluate([Y,X1,X2], b, batch_size=120)
         # history =  self.av_model.fit([Y,X1,X2], b, shuffle=True, epochs=5, batch_size=120)
         # self.trainloss = history.history['loss'][0]
         
         ########### calculating Recall@10 
         if self.find_recalls:
-            audio_embeddings = self.audio_embedding_model.predict([X1, X2])    
-            visual_embeddings = self.visual_embedding_model.predict(Y) 
-            
+            if self.loss == 'MMS':
+                audio_embeddings = self.audio_embedding_model.predict([X1, X2])    
+                visual_embeddings = self.visual_embedding_model.predict(Y)
+                number_of_samples = len(X1)
+                del X1,X2,Y
+            if self.loss == 'triplet':
+                audio_embeddings = self.audio_embedding_model.predict([audio_features, speech_features])    
+                visual_embeddings = self.visual_embedding_model.predict(visual_features) 
+                number_of_samples = len(audio_embeddings)
+                del audio_features, speech_features, visual_features
+                
             audio_embeddings_mean = numpy.mean(audio_embeddings, axis = 1)
             visual_embeddings_mean = numpy.mean(visual_embeddings, axis = 1) 
-            
-            number_of_samples = len(X1)
-            del X1,X2,Y
-            # audio_embeddings = numpy.squeeze(audio_embeddings)
-            # visual_embeddings = numpy.squeeze(visual_embeddings)
-            print('checking embedd shape')
+
             print(audio_embeddings.shape)
             print(visual_embeddings.shape)
                                
-            poolsize =  3206
+            poolsize =  1000
             number_of_trials = 3
             
             recall_av_vec = calculate_recallat10( audio_embeddings_mean, visual_embeddings_mean, number_of_trials,  number_of_samples  , poolsize )          

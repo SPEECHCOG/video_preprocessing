@@ -335,7 +335,7 @@ class Train_AVnet(AVnet):
  
         Y, X1, X2, b = prepare_data (audio_features , speech_features , visual_features  , self.loss,  shuffle_data = True)
         del audio_features, speech_features , visual_features 
-        history =  self.av_model.fit([Y,X1,X2], b, shuffle=True, epochs=5, batch_size=120)
+        history =  self.av_model.fit([Y,X1,X2], b, shuffle=False, epochs=5, batch_size=120)
         del X1,X2,Y
         self.trainloss = history.history['loss'][0]
 
