@@ -1,10 +1,11 @@
-
+import keras
 from utils import triplet_loss,  my_mms_loss
 from tensorflow.keras import backend as K
+
 from tensorflow.keras.layers import Lambda
 
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import  Input, Reshape, Dense, Dropout, BatchNormalization, dot, Softmax, Permute, UpSampling1D, Masking
+from tensorflow.keras.layers import  Input, Reshape, Dense, Dropout, BatchNormalization, dot, Softmax, Permute, UpSampling1D, Masking, Permute
 from tensorflow.keras.layers import  MaxPooling1D, MaxPooling2D, MaxPooling3D, AveragePooling1D,  Conv1D, Conv3D, Concatenate, ReLU, Add, Multiply, GRU
 from tensorflow.keras.optimizers import Adam
 
@@ -201,7 +202,7 @@ class AVnet():
         out_visual_channel = Reshape([input_reshape.shape[2]*input_reshape.shape[3],
                                                                  input_reshape.shape[4]], name='reshape_visual')(input_reshape)    
         out_visual_channel.shape
-        out_visual_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_visual')(out_visual_channel)
+        out_visual_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1), name='lambda_visual')(out_visual_channel)
         
         visual_model = Model(inputs= visual_sequence, outputs = out_visual_channel )
         visual_model.summary()
@@ -220,17 +221,39 @@ class AVnet():
         V = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_visual-final') (out_visual_channel)
         A = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_audio-final') (out_audio_channel)
         
+        # V = Reshape([1,V.shape[1], V.shape[2]])(V)
+        # A = Reshape([1,A.shape[1], A.shape[2]])(A)
+        # VA = dot ([V,A],axes=(-1,-1),normalize = True,name='batchdot')
+        
         visual_embedding_model = Model(inputs=visual_sequence, outputs= V, name='visual_embedding_model')
-        audio_embedding_model = Model(inputs=[audio_sequence , speech_sequence],outputs= A, name='visual_embedding_model')
-  
+        audio_embedding_model = Model(inputs=[audio_sequence , speech_sequence], outputs= A, name='visual_embedding_model')
+       
+        
+        # V_old = AveragePooling1D(64,padding='same')(V)
+        # V_old = Reshape([V_old.shape[-1]])(V_old) 
+
+        # A_old = AveragePooling1D(64,padding='same')(A)
+        # A_old = Reshape([V_old.shape[-1]])(A_old)         
+
+
+        # old = K.batch_dot(K.expand_dims(V_old,0), K.expand_dims(A_old,0) , axes=(-1,-1))  
+        # old = K.squeeze(old, axis = 0)
+        
+       
+ 
+        #new = K.squeeze(new, axis = 0)
+    
+        
         if self.loss == "triplet":  
+            mapIA = dot([V,A],axes=-1,normalize = True,name='dot_matchmap')
+            mapIA.shape
             def final_layer(tensor):
                 x= tensor 
                 score = K.mean( (K.max(x, axis=1)), axis=-1)        
                 output_score = Reshape([1],name='reshape_final')(score)          
                 return output_score
-            mapIA = dot([V,A],axes=-1,normalize = True,name='dot_matchmap') 
-            lambda_layer = Lambda(final_layer, name="final_layer")(mapIA)              
+            lambda_layer = Lambda(final_layer, name="final_layer")(mapIA)  
+              
             final_model = Model(inputs=[visual_sequence, [audio_sequence , speech_sequence ]], outputs = lambda_layer)
             final_model.compile(loss=triplet_loss, optimizer = Adam(lr=1e-04))
 
@@ -241,7 +264,17 @@ class AVnet():
             #     return input_tensor
             
             # lambda_layer = Lambda(final_layer , name="final_layer" ) ([V,A])     #lambda x,y: [x,y]  
-            final_model = Model(inputs=[visual_sequence, [audio_sequence , speech_sequence]], outputs = [V,A])
+            
+            VV = keras.backend.expand_dims(V,0)
+            #AA = K.expand_dims(A,0)
+            S = keras.backend.batch_dot(VV, A, axes =[-1,-1])
+            def final_layer(tensor): #N,N,49,63
+                x= tensor 
+                score = K.mean( (K.max(x, axis=-1)), axis=-1)        
+                     
+                return score
+            lambda_layer = Lambda(final_layer, name="final_layer")(S)
+            final_model = Model(inputs=[visual_sequence, [audio_sequence , speech_sequence]], outputs = lambda_layer)
             final_model.summary()
             final_model.compile(loss=my_mms_loss , optimizer= Adam(lr=1e-03)) # loss={'lambda_visual':mms_loss, 'lambda_speech':mms_loss}
     

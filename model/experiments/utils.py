@@ -130,24 +130,10 @@ def triplet_loss(y_true,y_pred):
     return K.sum(penalty_factor * K.maximum(0.0,(Sc-Sp + margin )) + penalty_factor * K.maximum(0.0,(Si-Sp + margin )),  axis=0) 
 
 
-def my_mms_loss(y_true , y_pred ): 
+def my_mms_loss(y_true , S ): 
     
-    
-    print('this is y_pred')
-    print(y_pred.shape)
-    
-    out_visual , out_audio = y_pred
-    
-    # out_visual = y_pred [:,0,:]
-    # out_audio = y_pred [:,1,:]
-    
-    # print('this isout_visual before expand dim')
-    # print(out_visual.shape)
-
-    out_visual = K.expand_dims(out_visual, 0)
-    out_audio = K.expand_dims(out_audio, 0)
-
-    S = K.squeeze( K.batch_dot(out_audio, out_visual, axes=[-1,-1]) , axis = 0)
+   
+    #S = K.squeeze( K.batch_dot(y_pred, y_pred, axes=[-1,-1]) , axis = 0)
        
     # ...................................................... method 0
     margine = 0.001
@@ -174,6 +160,5 @@ def my_mms_loss(y_true , y_pred ):
     
     loss = I2C_loss + C2I_loss
     
-    print('loss shape')
     
     return loss
