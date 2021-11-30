@@ -28,13 +28,10 @@ feature_config = cfg.feature_config
 obj = Train_AVnet(model_config , feature_config, training_config)
 [X1shape , X2shape, Yshape] = obj.get_input_shapes()
 # visual_embedding_model, audio_embedding_model, final_model = obj.build_network( X1shape , X2shape , Yshape)
-
 obj()
 # self = Inspection(model_config , training_config)
 # dict_anns = self()
             
-
-
 #feature_object = Features(audiochannel, visual_model, layer_name, featuredir_train, featuredir_test, outputdir, split , feature_settings)
 # model_object.split = 'train'
 # audio_features = model_object.get_audio_features()
@@ -49,7 +46,6 @@ obj()
 # import pickle5 as pickle   
 # with open("/worktmp/khorrami/project_5/video/features/youcook2/yamnet-based/testing/0/vf_Xception", 'rb') as handle:
 #     af = pickle.load(handle)
-
 
 ################################################################## testing MMS
 # from keras import backend as K

@@ -429,8 +429,8 @@ class Train_AVnet(AVnet):
             poolsize =  1000
             number_of_trials = 3
             
-            recall_av_vec = calculate_recallat10( audio_embeddings_mean, visual_embeddings_mean, number_of_trials,  number_of_samples  , poolsize )          
-            recall_va_vec = calculate_recallat10( visual_embeddings_mean , audio_embeddings_mean, number_of_trials,  number_of_samples , poolsize ) 
+            recall_av_vec = calculate_recallat10( audio_embeddings, visual_embeddings, number_of_trials,  number_of_samples  , poolsize )          
+            recall_va_vec = calculate_recallat10( visual_embeddings , audio_embeddings, number_of_trials,  number_of_samples , poolsize ) 
             self.recall10_av = numpy.mean(recall_av_vec)/(poolsize)
             self.recall10_va = numpy.mean(recall_va_vec)/(poolsize)         
             del audio_embeddings, visual_embeddings
@@ -487,7 +487,7 @@ class Train_AVnet(AVnet):
             self.av_model.load_weights(self.outputdir + 'model_weights.h5')
         # this must be called for initial evaluation and getting X,Y dimensions
         #self.evaluate()
-
+        self.evaluate()
         for epoch in range(15):
             print(epoch)
             
