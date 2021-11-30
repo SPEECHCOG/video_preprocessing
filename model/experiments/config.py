@@ -20,7 +20,7 @@ model_config = {
     "visual_model_name":  "Xception",#"resnet152"
     "visual_layer_name": 'block14_sepconv2_act',# "avg_pool"
     
-    "loss" : "MMS", 
+    "loss" : "triplet", 
     "clip_length" : 10
 }
 
