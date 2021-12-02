@@ -69,7 +69,8 @@ def download_video ( split, task_id, vid_name):
 
 
 
-start = time.perf_counter()  
+start_i = 100
+end_i = 150
 
 threads = []
 vid_fullnames = []
@@ -79,7 +80,10 @@ split = 'training'
 file_name = "/worktmp2/hxkhkh/current/video/data/crosstask/crosstask_release/videos.csv"
 with open( file_name, 'r') as handle:
     file = csv.reader(handle,  delimiter='\n')
-    for row in file:        
+    all_rows = []
+    for line in file: 
+        all_rows.append(line)
+    for row in all_rows [start_i:end_i]:        
         row_splitted = row[0].split(',')
         task_id = row_splitted[0]
         vid_name = row_splitted[1]
@@ -88,19 +92,11 @@ with open( file_name, 'r') as handle:
         thread = threading.Thread(target=download_video, args=( split, task_id, vid_name) )
         threads.append(thread)
         vid_fullnames.append(os.path.join(dataset_root, split, task_id, vid_name))
-        #download_video ( line, split, rcp_type, vid_name)
             
-
-#1100-1200 (3)
-#1000-1100 (1) 
-#500-600 (1)
-
-threads_chunk = threads[0:10]
-
-for thread in threads_chunk:
+for thread in threads:
     thread.start()
 
-for thread in threads_chunk:
+for thread in threads:
     thread.join()
            
 # finish = time.perf_counter()    
