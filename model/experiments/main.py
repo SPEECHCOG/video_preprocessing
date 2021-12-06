@@ -43,9 +43,9 @@ obj()
 # with open('../../features/youcook2/yamnet-based/testing/197/vf_resnet152', 'rb') as handle:
 #     c = pickle.load(handle)
 
-# import pickle5 as pickle   
-# with open("/worktmp/khorrami/project_5/video/features/youcook2/yamnet-based/testing/0/vf_Xception", 'rb') as handle:
-#     af = pickle.load(handle)
+import pickle5 as pickle   
+with open("/worktmp/khorrami/project_5/video/features/youcook2/yamnet-based/training_onsets", 'rb') as handle:
+    af = pickle.load(handle)
 
 ################################################################## testing MMS
 # from keras import backend as K
