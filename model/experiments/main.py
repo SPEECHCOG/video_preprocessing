@@ -26,7 +26,7 @@ feature_config = cfg.feature_config
 ###############################################################################
 
 obj = Train_AVnet(model_config , feature_config, training_config)
-#[X1shape , X2shape, Yshape] = obj.get_input_shapes()
+[X1shape , X2shape, Yshape] = obj.get_input_shapes()
 # visual_embedding_model, audio_embedding_model, final_model = obj.build_network( X1shape , X2shape , Yshape)
 obj()
 # self = Inspection(model_config , training_config)

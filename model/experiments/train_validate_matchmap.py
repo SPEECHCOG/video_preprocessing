@@ -431,8 +431,8 @@ class Train_AVnet(AVnet):
             
             del X1,X2,Y
                 
-            # audio_embeddings_mean = numpy.mean(audio_embeddings, axis = 1)
-            # visual_embeddings_mean = numpy.mean(visual_embeddings, axis = 1) 
+            audio_embeddings_mean = numpy.mean(audio_embeddings, axis = 1)
+            visual_embeddings_mean = numpy.mean(visual_embeddings, axis = 1) 
 
             print(audio_embeddings.shape)
             print(visual_embeddings.shape)
@@ -497,12 +497,12 @@ class Train_AVnet(AVnet):
         if self.use_pretrained:
             self.av_model.load_weights(self.outputdir + 'model_weights.h5')
         # this must be called for initial evaluation and getting X,Y dimensions
+        self.evaluate()
         self.train()
         self.evaluate()
     
-        for epoch in range(10):
-            print(epoch)
-            
+        for epoch in range(30):
+            print(epoch)           
             self.train()
             self.evaluate()
             if self.save_results:

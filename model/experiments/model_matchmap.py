@@ -165,11 +165,11 @@ class AVnet():
         out_4 = ReLU()(out)   # (64, 1024)  
         
         out_speech_channel = out_4
-        out_speech_channel  = AveragePooling1D(64,padding='same')(out_4) 
-        out_speech_channel = Reshape([out_speech_channel.shape[2]])(out_speech_channel) 
+        # out_speech_channel  = AveragePooling1D(64,padding='same')(out_4) 
+        # out_speech_channel = Reshape([out_speech_channel.shape[2]])(out_speech_channel) 
         
           
-        out_speech_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_speech')(out_speech_channel)
+        #out_speech_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_speech')(out_speech_channel)
         
         # combining sound and speech branches
         #out_audio_channel = Concatenate(axis=-1)([out_sound_channel, out_speech_channel])
@@ -197,13 +197,13 @@ class AVnet():
         # pool_visual = MaxPooling2D((10,1),padding='same')(visual_sequence_reshaped)
         # out_visual_channel = Reshape([pool_visual.shape[2], pool_visual.shape[3]])(pool_visual)
         
-        pool_visual = MaxPooling3D((10,7,7),padding='same')(bn_visual)
+        pool_visual = MaxPooling3D((10,1,1),padding='same')(bn_visual)
         input_reshape = pool_visual
-        out_visual_channel = Reshape([input_reshape.shape[4]])(input_reshape)
-        # out_visual_channel = Reshape([input_reshape.shape[2]*input_reshape.shape[3],
-        #                                                          input_reshape.shape[4]], name='reshape_visual')(input_reshape)    
+        #out_visual_channel = Reshape([input_reshape.shape[4]])(input_reshape)
+        out_visual_channel = Reshape([input_reshape.shape[2]*input_reshape.shape[3],
+                                                                  input_reshape.shape[4]], name='reshape_visual')(input_reshape)    
         out_visual_channel.shape
-        out_visual_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1), name='lambda_visual')(out_visual_channel)
+        #out_visual_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1), name='lambda_visual')(out_visual_channel)
         
         visual_model = Model(inputs= visual_sequence, outputs = out_visual_channel )
         visual_model.summary()
@@ -247,13 +247,13 @@ class AVnet():
         
         if self.loss == "triplet":  
             mapIA = dot([V,A],axes=-1,normalize = True,name='dot_matchmap')
-            mapIA.shape
-            # def final_layer(tensor):
-            #     x= tensor 
-            #     score = K.mean( (K.max(x, axis=1)), axis=-1)        
-            #     output_score = Reshape([1],name='reshape_final')(score)          
-            #     return output_score
-            # lambda_layer = Lambda(final_layer, name="final_layer")(mapIA)  
+            # mapIA.shape
+            def final_layer(tensor):
+                x= tensor 
+                score = K.mean( (K.max(x, axis=1)), axis=-1)        
+                output_score = Reshape([1],name='reshape_final')(score)          
+                return output_score
+            lambda_layer = Lambda(final_layer, name="final_layer")(mapIA)  
               
             final_model = Model(inputs=[visual_sequence, [audio_sequence , speech_sequence ]], outputs = mapIA)
             final_model.compile(loss=triplet_loss, optimizer = Adam(lr=1e-04))
