@@ -375,22 +375,7 @@ class Train_AVnet(AVnet):
             history =  self.av_model.fit([Y,X1,X2],target, shuffle=False, epochs=1 , batch_size=120)
             del X1,X2,Y  
            
-            self.trainloss = history.history['loss'][0]
-
-        # ... chunk 3
-        # self.load_dict_onsets()
-        # self.chunk_data (300, 400)
-        # self.find_error_clips()
-        
-        # audio_features_train = self.get_audio_features(self.audio_feature_name)        
-        # speech_features_train = self.get_audio_features(self.speech_feature_name)        
-        # visual_features_train = self.get_visual_features()
- 
-        # Y, X1, X2, b = prepare_data (audio_features_train , speech_features_train , visual_features_train  , self.loss,  shuffle_data = True)
-        # del audio_features_train, speech_features_train, visual_features_train 
-        # history =  self.av_model.fit([Y,X1,X2], b, shuffle=False, epochs=2, batch_size=120)
-        # del X1,X2,Y
-        # self.trainloss = history.history['loss'][0]   
+            self.trainloss = history.history['loss'][0]  
             
     
     def evaluate(self):
@@ -434,17 +419,17 @@ class Train_AVnet(AVnet):
             audio_embeddings_mean = numpy.mean(audio_embeddings, axis = 1)
             visual_embeddings_mean = numpy.mean(visual_embeddings, axis = 1) 
 
-            print(audio_embeddings.shape)
-            print(visual_embeddings.shape)
+            print(audio_embeddings_mean.shape)
+            print(visual_embeddings_mean.shape)
                                
             poolsize =  1000
-            number_of_trials = 3
+            number_of_trials = 5
             
-            recall_av_vec = calculate_recallat10( audio_embeddings, visual_embeddings, number_of_trials,  number_of_samples  , poolsize )          
-            recall_va_vec = calculate_recallat10( visual_embeddings , audio_embeddings, number_of_trials,  number_of_samples , poolsize ) 
+            recall_av_vec = calculate_recallat10( audio_embeddings_mean, visual_embeddings_mean, number_of_trials,  number_of_samples  , poolsize )          
+            recall_va_vec = calculate_recallat10( visual_embeddings_mean , audio_embeddings_mean, number_of_trials,  number_of_samples , poolsize ) 
             self.recall10_av = numpy.mean(recall_av_vec)/(poolsize)
             self.recall10_va = numpy.mean(recall_va_vec)/(poolsize)         
-            del audio_embeddings, visual_embeddings
+            
             print('............. results for retrieval ............ av and va ')
             
             print(self.recall10_av)
@@ -482,7 +467,7 @@ class Train_AVnet(AVnet):
             plt.subplot(2,2,plot_counter+1)
             plt.plot(plot_value)
             plt.title(plot_names[plot_counter])
-            plt.xlabel('epoch*2')
+            plt.xlabel('epoch')
             plt.grid()         
         plt.savefig(self.outputdir + 'evaluation_plot.pdf', format = 'pdf')            
         
@@ -501,7 +486,7 @@ class Train_AVnet(AVnet):
         self.train()
         self.evaluate()
     
-        for epoch in range(30):
+        for epoch in range(50):
             print(epoch)           
             self.train()
             self.evaluate()
