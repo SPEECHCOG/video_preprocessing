@@ -251,11 +251,35 @@ class Train_AVnet(AVnet):
                         #     self.errorclips[counter_clip] = {}
                         #     self.errorclips[counter_clip]['v'] = 1
                     counter_clip += 1 
-        
-    def get_audio_features (self, feature_name ):
-        
-        af_all = [] 
-         
+
+    def get_sample_names (self):
+        img_all = []
+        wav_all = [] 
+        vid_names = []         
+        counter_clip = 0
+        for video_name, value in self.dict_onsets_chunk.items():           
+            self.video_name = video_name
+            
+            self.folder_name = value['folder_name'] 
+            number_of_clips = len(value['onsets'] )                   
+            self.feature_path = os.path.join(self.featuredir , self.featuretype, self.split ,  str(self.folder_name)) 
+            path_image = os.path.join(self.feature_path, 'images')
+            path_audio = os.path.join(self.feature_path, 'wavs')
+            for counter_item in range(number_of_clips):
+                if counter_clip not in self.errorclips:
+                    img_all.append(os.path.join(path_image, str(counter_item)) )
+                    wav_all.append(os.path.join(path_audio, str(counter_item)) )
+                    vid_names.append(self.video_name)
+                counter_clip += 1    
+                # counter_clip += 1
+                # if clip_logmel.shape[0] == self.clip_length * 100:
+                #     logmel.append(clip_logmel)
+                # else:
+                #     self.errorclips.append(counter_clip)                   
+        return img_all, wav_all, vid_names
+                
+    def get_audio_features (self, feature_name ):       
+        af_all = []          
         counter_clip = 0
         for video_name, value in self.dict_onsets_chunk.items():           
             self.video_name = video_name
@@ -272,8 +296,7 @@ class Train_AVnet(AVnet):
                 # if clip_logmel.shape[0] == self.clip_length * 100:
                 #     logmel.append(clip_logmel)
                 # else:
-                #     self.errorclips.append(counter_clip)
-                    
+                #     self.errorclips.append(counter_clip)                   
             if self.featuretype == "ann-based":                  
                 af_all.append(logmel)
             elif self.featuretype == "yamnet-based":
@@ -377,6 +400,28 @@ class Train_AVnet(AVnet):
            
             self.trainloss = history.history['loss'][0]  
             
+    def predict(self):
+        
+        [X1shape , X2shape , Yshape] = self.get_input_shapes()
+        self.visual_embedding_model, self.audio_embedding_model, self.av_model = self.build_network( X1shape , X2shape , Yshape )
+        self.initialize_model_outputs()
+        if self.use_pretrained:
+            self.av_model.load_weights(self.outputdir + 'model_weights.h5')
+        self.split = "testing" 
+        self.featuretype = 'yamnet-based'
+        self.load_dict_onsets_polished()
+        self.chunk_data (0, 100)
+        self.find_error_clips()
+         
+        audio_feat = self.get_audio_features(self.audio_feature_name) # (N,21,1024)        
+        speech_feat = self.get_audio_features(self.speech_feature_name) # (N, 1000, 40)        
+        visual_feat = self.get_visual_features() # (N, 10, 7,7, 2048)
+        [Y, X1, X2], target = prepare_data (audio_feat , speech_feat , visual_feat  , self.loss,  shuffle_data = True)
+        del audio_feat, speech_feat, visual_feat
+                
+        predictions = self.av_model.predict([Y,X1,X2])
+        img_all, wav_all, vid_names = self.get_sample_names()
+        return img_all, wav_all, vid_names, predictions[::3]
     
     def evaluate(self):
         
@@ -482,8 +527,6 @@ class Train_AVnet(AVnet):
         if self.use_pretrained:
             self.av_model.load_weights(self.outputdir + 'model_weights.h5')
         # this must be called for initial evaluation and getting X,Y dimensions
-        self.evaluate()
-        self.train()
         self.evaluate()
     
         for epoch in range(50):
