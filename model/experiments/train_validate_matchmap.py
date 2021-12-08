@@ -417,11 +417,26 @@ class Train_AVnet(AVnet):
         speech_feat = self.get_audio_features(self.speech_feature_name) # (N, 1000, 40)        
         visual_feat = self.get_visual_features() # (N, 10, 7,7, 2048)
         [Y, X1, X2], target = prepare_data (audio_feat , speech_feat , visual_feat  , self.loss,  shuffle_data = True)
-        del audio_feat, speech_feat, visual_feat
+        del audio_feat, speech_feat
                 
-        predictions = self.av_model.predict([Y,X1,X2])
+        
+        if self.loss == 'MMS':
+            predictions = self.av_model.predict([Y,X1,X2])
+            audio_embeddings = self.audio_embedding_model.predict([X1, X2])    
+            visual_embeddings = self.visual_embedding_model.predict(Y)
+            
+                
+        if self.loss == 'triplet':
+            predictions = self.av_model.predict([Y[::3],X1[::3],X2[::3]])
+            audio_embeddings = self.audio_embedding_model.predict([X1[::3], X2[::3]])    
+            visual_embeddings = self.visual_embedding_model.predict(Y[::3]) 
+            
+            
+        audio_embeddings_mean = numpy.mean(audio_embeddings, axis = 1)
+        visual_embeddings_mean = numpy.mean(visual_embeddings, axis = 1)
+            
         img_all, wav_all, vid_names = self.get_sample_names()
-        return img_all, wav_all, vid_names, predictions[::3]
+        return img_all, wav_all, vid_names, predictions, visual_feat, audio_embeddings_mean,visual_embeddings_mean 
     
     def evaluate(self):
         
