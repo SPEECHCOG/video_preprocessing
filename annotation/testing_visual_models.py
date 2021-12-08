@@ -18,9 +18,7 @@ from tensorflow.keras.applications.xception import preprocess_input as processin
 from tensorflow.keras.applications.xception import decode_predictions as decode_xception
 
 output_dir = '/worktmp/khorrami/project_5/video/features/ouput/youcook2/examples/visual_detections/'
-image_dir = '/worktmp/khorrami/project_5/video/features/ouput/youcook2/ann-based/'
-
-
+image_dir = '/worktmp/khorrami/project_5/video/features/youcook2/yamnet-based/'
 
 def load_model (visual_model_name):    
     if visual_model_name == "vgg16":
@@ -69,7 +67,7 @@ def find_image_class (image_fullname, visual_model_name, model) :
 
 #%% loading example image
 cnt_im = 10
-image_name = 'validation/187/images/10/1.jpg'
+image_name = 'testing/3/images/17/1.jpg'
 
 test_image_name = os.path.join(image_dir,image_name )
 test_image_original = image.load_img(test_image_name, target_size=(224, 224))
@@ -102,7 +100,7 @@ figures,axes = plt.subplots(1,2)
 plt.title(visual_model_name + ': ' + label_name + '(' + str(label_confidence) +  ')')
 axes[0].imshow(test_image_original)
 axes[1].imshow(features_average)
-
+kh
 plt.savefig(output_dir + str(cnt_im) + '_' + visual_model_name )
 # axes[2].imshow(test_image_original)
 # axes[2].imshow(features_average, alpha=0.15)

@@ -36,9 +36,9 @@ obj()
 
 
 
-# import pickle5 as pickle   
-# with open("/worktmp/khorrami/project_5/video/features/youcook2/yamnet-based/testing/0/af", 'rb') as handle:
-#     af = pickle.load(handle)
+import pickle5 as pickle   
+with open("/worktmp/khorrami/project_5/video/features/youcook2/yamnet-based/testing/75/vf_Xception", 'rb') as handle:
+    vf = pickle.load(handle)
 ################################################################## testing MMS
 # from keras import backend as K
 # import tensorflow as tf

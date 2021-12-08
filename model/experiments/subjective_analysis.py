@@ -32,17 +32,17 @@ images,wavs, vid_names, preds, visual_feat, audio_embeddings_mean,visual_embeddi
 
 preds_rsh = numpy.reshape(preds,[preds.shape[0],7,7,63])
 
-
+kh
 ###############################################################################
 #%%
-# m = 60
-# text =' ... this is starting to look awsome, look at that,\n you can see in the last 30 seconds, it changed a lot in texture ...\n'
+m = 60
+text =' ... this is starting to look awsome, look at that,\n you can see in the last 30 seconds, it changed a lot in texture ...\n'
 # m = 158
 # text = ' ... she is going to make this delicious miso soup for us today  \n we are going to use firm Tofu for this recipe...  '
 # m = 162
 # text = ' ... for our miso soup, we have dried  sea vegetable here \n we are not going to use the whole thing,\n I will show you when we are making it, we have white ...  '
-m = 246
-text = '... avocado strips across the center of nori\n , squeeze a line of mayonnaise next to this, \n if your mayonnaise is not ... '
+# m = 246
+# text = '... avocado strips across the center of nori\n , squeeze a line of mayonnaise next to this, \n if your mayonnaise is not ... '
 
 sample = images[m],wavs[m],preds_rsh[m]
 matchmap = sample[2]

@@ -405,8 +405,9 @@ class Train_AVnet(AVnet):
         [X1shape , X2shape , Yshape] = self.get_input_shapes()
         self.visual_embedding_model, self.audio_embedding_model, self.av_model = self.build_network( X1shape , X2shape , Yshape )
         self.initialize_model_outputs()
-        if self.use_pretrained:
-            self.av_model.load_weights(self.outputdir + 'model_weights.h5')
+        #if self.use_pretrained:
+        self.av_model.load_weights(self.outputdir + 'model_weights.h5')
+        
         self.split = "testing" 
         self.featuretype = 'yamnet-based'
         self.load_dict_onsets_polished()
@@ -416,7 +417,7 @@ class Train_AVnet(AVnet):
         audio_feat = self.get_audio_features(self.audio_feature_name) # (N,21,1024)        
         speech_feat = self.get_audio_features(self.speech_feature_name) # (N, 1000, 40)        
         visual_feat = self.get_visual_features() # (N, 10, 7,7, 2048)
-        [Y, X1, X2], target = prepare_data (audio_feat , speech_feat , visual_feat  , self.loss,  shuffle_data = True)
+        [Y, X1, X2], target = prepare_data (audio_feat , speech_feat , visual_feat  , self.loss,  shuffle_data = False)
         del audio_feat, speech_feat
                 
         
@@ -429,8 +430,7 @@ class Train_AVnet(AVnet):
         if self.loss == 'triplet':
             predictions = self.av_model.predict([Y[::3],X1[::3],X2[::3]])
             audio_embeddings = self.audio_embedding_model.predict([X1[::3], X2[::3]])    
-            visual_embeddings = self.visual_embedding_model.predict(Y[::3]) 
-            
+            visual_embeddings = self.visual_embedding_model.predict(Y[::3])             
             
         audio_embeddings_mean = numpy.mean(audio_embeddings, axis = 1)
         visual_embeddings_mean = numpy.mean(visual_embeddings, axis = 1)
