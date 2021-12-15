@@ -32,7 +32,7 @@ images,wavs, vid_names, preds, visual_feat, audio_embeddings_mean,visual_embeddi
 
 preds_rsh = numpy.reshape(preds,[preds.shape[0],7,7,63])
 
-kh
+
 ###############################################################################
 #%%
 m = 60
@@ -40,72 +40,78 @@ text =' ... this is starting to look awsome, look at that,\n you can see in the 
 # m = 158
 # text = ' ... she is going to make this delicious miso soup for us today  \n we are going to use firm Tofu for this recipe...  '
 # m = 162
-# text = ' ... for our miso soup, we have dried  sea vegetable here \n we are not going to use the whole thing,\n I will show you when we are making it, we have white ...  '
+# text = ' ... for our miso soup, we have dried  sea vegetable here, we are not going to use the whole thing,\n I will show you when we are making it, we have white ...  '
 # m = 246
-# text = '... avocado strips across the center of nori\n , squeeze a line of mayonnaise next to this, \n if your mayonnaise is not ... '
+# text = '... avocado strips across the center of nori , squeeze a line of mayonnaise next to this, \n if your mayonnaise is not ...\n '
 
 sample = images[m],wavs[m],preds_rsh[m]
 matchmap = sample[2]
 image_name = sample[0]
 audio_file = sample[1]
 
+
+matchmap_r = numpy.reshape(matchmap,[49,63])
+matchmap_r_m = numpy.max(matchmap_r, axis=0 )
+plt.plot(matchmap_r_m)
+
+
 plt.Figure()
 
-sample_image = plt.imread(image_name + '/0.jpg') # central image
+sample_image = plt.imread(image_name + '/0.jpg') 
 plt.subplot(4,5,1) 
 plt.title('0', fontsize=8)  
 plt.imshow(sample_image)
 plt.axis('off')
 
-sample_image = plt.imread(image_name + '/1.jpg') # central image
+sample_image = plt.imread(image_name + '/1.jpg') 
 plt.subplot(4,5,2) 
 plt.title('1', fontsize=8)  
 plt.imshow(sample_image)
 plt.axis('off')
 
-sample_image = plt.imread(image_name + '/2.jpg') # central image
+sample_image = plt.imread(image_name + '/2.jpg') 
 plt.subplot(4,5,3) 
 plt.title('2', fontsize=8)  
 plt.imshow(sample_image)
 plt.axis('off')
 
-sample_image = plt.imread(image_name + '/3.jpg') # central image
+sample_image = plt.imread(image_name + '/3.jpg') 
 plt.subplot(4,5,4) 
 plt.title('3', fontsize=8)  
 plt.imshow(sample_image)
 plt.axis('off')
 
-sample_image = plt.imread(image_name + '/4.jpg') # central image
+sample_image = plt.imread(image_name + '/4.jpg') 
 plt.subplot(4,5,5) 
 plt.title('4', fontsize=8)  
 plt.imshow(sample_image)
 plt.axis('off')
 
-sample_image = plt.imread(image_name + '/5.jpg') # central image
+sample_image = plt.imread(image_name + '/5.jpg') 
 plt.subplot(4,5,6) 
 plt.title('5', fontsize=8)  
 plt.imshow(sample_image)
 plt.axis('off')
 
-sample_image = plt.imread(image_name + '/6.jpg') # central image
+sample_image = plt.imread(image_name + '/6.jpg') 
 plt.subplot(4,5,7) 
 plt.title('6', fontsize=8)  
 plt.imshow(sample_image)
 plt.axis('off')
 
-sample_image = plt.imread(image_name + '/7.jpg') # central image
+sample_image = plt.imread(image_name + '/7.jpg') 
 plt.subplot(4,5,8) 
 plt.title('7', fontsize=8)  
 plt.imshow(sample_image)
 plt.axis('off')
 
-sample_image = plt.imread(image_name + '/8.jpg') # central image
+sample_image = plt.imread(image_name + '/8.jpg') 
 plt.subplot(4,5,9) 
 plt.title('8', fontsize=8)  
 plt.imshow(sample_image)
 plt.axis('off')
 
-sample_image = plt.imread(image_name + '/9.jpg') # central image
+sample_image = plt.imread(image_name + '/9.jpg') 
 plt.subplot(4,5,10) 
 plt.title('9', fontsize=8)  
 plt.imshow(sample_image)
@@ -120,7 +126,7 @@ for i in range(10):
     plt.axis('off')
     #plt.title(str(i + 1), fontsize=10)
 plt.suptitle(text + '\n', fontsize=8)
-plt.savefig(obj.outputdir + 'samples/' + 'sample_' + str(m) + '_input.pdf' )    
+plt.savefig(obj.outputdir + 'samples/' + 'sample_' + str(m) + '_input.png' )    
 
 #%%
 
@@ -154,9 +160,8 @@ for i in range(10):
     plt.axis('off')
     plt.title(str(i + 1), fontsize=10)
  
-plt.suptitle(text, fontsize=8)
-plt.savefig(obj.outputdir + 'samples/' + 'sample_' + str(m) + '_adv.pdf' )
-
+#plt.suptitle(text, fontsize=8)
+plt.savefig(obj.outputdir + 'samples/' + 'sample_' + str(m) + '_adv.png' )
 
 print(image_name)
 print(audio_file)
@@ -181,4 +186,4 @@ for i in range(10):
     plt.title(str(i + 1), fontsize=8)
  
 plt.suptitle(text, fontsize=8)
-plt.savefig(obj.outputdir + 'samples/' + 'sample_' + str(m) + '_av.pdf' )
+plt.savefig(obj.outputdir + 'samples/' + 'sample_' + str(m) + '_av.png' )

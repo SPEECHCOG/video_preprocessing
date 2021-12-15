@@ -187,9 +187,8 @@ class AVnet():
         
         forward_visual = Conv3D(1024,(1,3,3),strides=(1,1,1),padding = "same", activation='linear', name = 'conv_visual')(visual_sequence_norm)
         dr_visual = Dropout(dropout_size,name = 'dr_visual')(forward_visual)
-        bn_visual = BatchNormalization(axis=-1,name = 'bn1_visual')(dr_visual)
-        
-        
+        bn_visual = BatchNormalization(axis=-1,name = 'bn1_visual')(dr_visual) # (10,7,7,1024)
+
         # 
         # visual_sequence_reshaped.shape
         
@@ -202,7 +201,7 @@ class AVnet():
         #out_visual_channel = Reshape([input_reshape.shape[4]])(input_reshape)
         out_visual_channel = Reshape([input_reshape.shape[2]*input_reshape.shape[3],
                                                                   input_reshape.shape[4]], name='reshape_visual')(input_reshape)    
-        out_visual_channel.shape
+        out_visual_channel.shape # (49,1024)
         #out_visual_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1), name='lambda_visual')(out_visual_channel)
         
         visual_model = Model(inputs= visual_sequence, outputs = out_visual_channel )
@@ -254,8 +253,10 @@ class AVnet():
                 output_score = Reshape([1],name='reshape_final')(score)          
                 return output_score
             lambda_layer = Lambda(final_layer, name="final_layer")(mapIA)  
-              
-            final_model = Model(inputs=[visual_sequence, [audio_sequence , speech_sequence ]], outputs = mapIA)
+            lambda_layer = Dense (2048, name='alpha')(lambda_layer)
+            lambda_layer = Dense (1)(lambda_layer)
+            final_model = Model(inputs=[visual_sequence, [audio_sequence , speech_sequence ]], outputs = lambda_layer)
+            final_model.summary()
             final_model.compile(loss=triplet_loss, optimizer = Adam(lr=1e-04))
 
             

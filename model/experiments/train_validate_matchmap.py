@@ -418,11 +418,10 @@ class Train_AVnet(AVnet):
         speech_feat = self.get_audio_features(self.speech_feature_name) # (N, 1000, 40)        
         visual_feat = self.get_visual_features() # (N, 10, 7,7, 2048)
         [Y, X1, X2], target = prepare_data (audio_feat , speech_feat , visual_feat  , self.loss,  shuffle_data = False)
-        del audio_feat, speech_feat
-                
+        
         
         if self.loss == 'MMS':
-            predictions = self.av_model.predict([Y,X1,X2])
+            predictions = self.av_model.predict([visual_feat,audio_feat,speech_feat])
             audio_embeddings = self.audio_embedding_model.predict([X1, X2])    
             visual_embeddings = self.visual_embedding_model.predict(Y)
             
