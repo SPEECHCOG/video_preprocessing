@@ -4,7 +4,7 @@ training_config = {
   "featuretype": "ann-based",
   "outputdir": "../../../model/youcook2/experiments/",
   "dataset": "YOUCOOK2",
-  "use_pretrained": False,
+  "use_pretrained": True,
   "save_results" : True,
   "plot_results" : False
 }

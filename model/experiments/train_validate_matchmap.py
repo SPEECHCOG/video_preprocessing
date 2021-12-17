@@ -403,7 +403,7 @@ class Train_AVnet(AVnet):
     def predict(self):
         
         [X1shape , X2shape , Yshape] = self.get_input_shapes()
-        self.visual_embedding_model, self.audio_embedding_model, self.av_model = self.build_network( X1shape , X2shape , Yshape )
+        self.visual_embedding_model, self.audio_embedding_model, self.av_model, self.mapmodel = self.build_network( X1shape , X2shape , Yshape )
         self.initialize_model_outputs()
         #if self.use_pretrained:
         self.av_model.load_weights(self.outputdir + 'model_weights.h5')
@@ -421,18 +421,18 @@ class Train_AVnet(AVnet):
         
         
         if self.loss == 'MMS':
-            predictions = self.av_model.predict([visual_feat,audio_feat,speech_feat])
+            predictions = self.mapmodel.predict([visual_feat,audio_feat,speech_feat])
             audio_embeddings = self.audio_embedding_model.predict([X1, X2])    
             visual_embeddings = self.visual_embedding_model.predict(Y)
             
                 
         if self.loss == 'triplet':
-            predictions = self.av_model.predict([Y[::3],X1[::3],X2[::3]])
+            predictions = self.mapmodel.predict([Y[::3],X1[::3],X2[::3]])
             audio_embeddings = self.audio_embedding_model.predict([X1[::3], X2[::3]])    
             visual_embeddings = self.visual_embedding_model.predict(Y[::3])             
             
         audio_embeddings_mean = numpy.mean(audio_embeddings, axis = 1)
-        visual_embeddings_mean = numpy.mean(visual_embeddings, axis = 1)
+        visual_embeddings_mean = numpy.mean( numpy.mean(visual_embeddings, axis = 1) , axis = 1)
             
         img_all, wav_all, vid_names = self.get_sample_names()
         return img_all, wav_all, vid_names, predictions, visual_feat, audio_embeddings_mean,visual_embeddings_mean 
@@ -476,7 +476,7 @@ class Train_AVnet(AVnet):
             del X1,X2,Y
                 
             audio_embeddings_mean = numpy.mean(audio_embeddings, axis = 1)
-            visual_embeddings_mean = numpy.mean(visual_embeddings, axis = 1) 
+            visual_embeddings_mean = numpy.mean(numpy.mean(visual_embeddings, axis = 1), axis = 1)
 
             print(audio_embeddings_mean.shape)
             print(visual_embeddings_mean.shape)
@@ -534,13 +534,14 @@ class Train_AVnet(AVnet):
     def __call__ (self):
         
         [X1shape , X2shape , Yshape] = self.get_input_shapes()
-        self.visual_embedding_model, self.audio_embedding_model, self.av_model = self.build_network( X1shape , X2shape , Yshape )
+        self.visual_embedding_model, self.audio_embedding_model, self.av_model, self.mapmodel = self.build_network( X1shape , X2shape , Yshape )
         #self.featuretype = 'ann-based'
         
         self.initialize_model_outputs()
         if self.use_pretrained:
             self.av_model.load_weights(self.outputdir + 'model_weights.h5')
         # this must be called for initial evaluation and getting X,Y dimensions
+        self.train()
         self.evaluate()
     
         for epoch in range(50):

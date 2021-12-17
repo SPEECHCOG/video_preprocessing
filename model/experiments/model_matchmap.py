@@ -156,11 +156,11 @@ class AVnet():
         
         # layer 4
         in_residual = out_3  
-        x1 = Conv1D(1024,9,strides = 1, padding="same")(in_residual)
+        x1 = Conv1D(512,9,strides = 1, padding="same")(in_residual)
         x1 = BatchNormalization(axis=-1)(x1)
         x1 = ReLU()(x1)       
-        x2 = Conv1D(1024,9,strides = strd, padding="same")(x1)  
-        downsample = Conv1D(1024,9,strides = strd, padding="same")(in_residual)
+        x2 = Conv1D(512,9,strides = strd, padding="same")(x1)  
+        downsample = Conv1D(512,9,strides = strd, padding="same")(in_residual)
         out = Add()([downsample,x2])
         out_4 = ReLU()(out)   # (64, 1024)  
         
@@ -185,7 +185,7 @@ class AVnet():
         visual_sequence = Input(shape=Yshape) #Yshape = (10,7,7,2048)
         visual_sequence_norm = BatchNormalization(axis=-1, name = 'bn0_visual')(visual_sequence)
         
-        forward_visual = Conv3D(1024,(1,3,3),strides=(1,1,1),padding = "same", activation='linear', name = 'conv_visual')(visual_sequence_norm)
+        forward_visual = Conv3D(512,(10,3,3),strides=(1,1,1),padding = "same", activation='linear', name = 'conv_visual')(visual_sequence_norm)
         dr_visual = Dropout(dropout_size,name = 'dr_visual')(forward_visual)
         bn_visual = BatchNormalization(axis=-1,name = 'bn1_visual')(dr_visual) # (10,7,7,1024)
 
@@ -196,10 +196,10 @@ class AVnet():
         # pool_visual = MaxPooling2D((10,1),padding='same')(visual_sequence_reshaped)
         # out_visual_channel = Reshape([pool_visual.shape[2], pool_visual.shape[3]])(pool_visual)
         
-        pool_visual = MaxPooling3D((10,1,1),padding='same')(bn_visual)
+        pool_visual = MaxPooling3D((1,2,2),padding='same')(bn_visual)
         input_reshape = pool_visual
         #out_visual_channel = Reshape([input_reshape.shape[4]])(input_reshape)
-        out_visual_channel = Reshape([input_reshape.shape[2]*input_reshape.shape[3],
+        out_visual_channel = Reshape([input_reshape.shape[1],input_reshape.shape[2]*input_reshape.shape[3],
                                                                   input_reshape.shape[4]], name='reshape_visual')(input_reshape)    
         out_visual_channel.shape # (49,1024)
         #out_visual_channel = Lambda(lambda  x: K.l2_normalize(x,axis=-1), name='lambda_visual')(out_visual_channel)
@@ -220,7 +220,8 @@ class AVnet():
         
         V = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_visual-final') (out_visual_channel)
         A = Lambda(lambda  x: K.l2_normalize(x,axis=-1),name='lambda_audio-final') (out_audio_channel)
-        
+        input_reshape= A
+        Ar = Reshape([1, input_reshape.shape[1], input_reshape.shape[2]])(input_reshape)  
         # V = Reshape([1,V.shape[1], V.shape[2]])(V)
         # A = Reshape([1,A.shape[1], A.shape[2]])(A)
         # VA = dot ([V,A],axes=(-1,-1),normalize = True,name='batchdot')
@@ -245,19 +246,20 @@ class AVnet():
     
         
         if self.loss == "triplet":  
-            mapIA = dot([V,A],axes=-1,normalize = True,name='dot_matchmap')
+            mapIA = dot([V,Ar],axes=-1,normalize = True,name='dot_matchmap')
             # mapIA.shape
             def final_layer(tensor):
                 x= tensor 
-                score = K.mean( (K.max(x, axis=1)), axis=-1)        
+                score = K.mean( K.max( (K.mean(x, axis=-1)), axis=-1) , axis=-1 )       
                 output_score = Reshape([1],name='reshape_final')(score)          
                 return output_score
             lambda_layer = Lambda(final_layer, name="final_layer")(mapIA)  
-            lambda_layer = Dense (2048, name='alpha')(lambda_layer)
-            lambda_layer = Dense (1)(lambda_layer)
+            # lambda_layer = Dense (2048, name='alpha')(lambda_layer)
+            # lambda_layer = Dense (1)(lambda_layer)
             final_model = Model(inputs=[visual_sequence, [audio_sequence , speech_sequence ]], outputs = lambda_layer)
             final_model.summary()
             final_model.compile(loss=triplet_loss, optimizer = Adam(lr=1e-04))
+            mapmodel = Model(inputs=[visual_sequence, [audio_sequence , speech_sequence ]], outputs = mapIA)
 
             
         elif self.loss == "MMS":
@@ -282,7 +284,7 @@ class AVnet():
     
         
     
-        return visual_embedding_model,audio_embedding_model,final_model
+        return visual_embedding_model,audio_embedding_model,final_model, mapmodel
 
  
        

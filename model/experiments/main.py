@@ -27,7 +27,7 @@ feature_config = cfg.feature_config
 
 obj = Train_AVnet(model_config , feature_config, training_config)
 [X1shape , X2shape, Yshape] = obj.get_input_shapes()
-
+kh
 obj()
 
 
