@@ -15,6 +15,7 @@ The model consists of two parallel branches: one for processing visual data and 
 # Data
 
 The data used in these experiments are instructional videos from YouTube, including "YouCook2" and "CrossTask".
+The "download" folder contains scripts for downloading YouTube videos.
 
 # Visual pre-processing
 
