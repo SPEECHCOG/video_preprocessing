@@ -1,2 +1,3 @@
 # video_preprocessing
-different video pre- processing tasks for VGS models
+
+This repository contains different video processing tasks for audio-video associative learning and alignement.
