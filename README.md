@@ -29,3 +29,8 @@ The "yamnet" folder contains scripts for audio preprocessing.
 # Annotations
 
 The "annotations" folder contains scripts to read data annotations.
+
+# Example results 
+
+Audio-to-video retrieval and alignments
+![60](https://github.com/SPEECHCOG/video_preprocessing/assets/33454475/27b0cb11-c3f6-4cea-b714-70fab8742d10)
